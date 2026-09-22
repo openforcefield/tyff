@@ -23,6 +23,8 @@ distributed = "*"
 openmm = "==8.4.*"
 symengine = "*"
 rdkit = "==2023.*"
+matplotlib = "*"
+panel = "*"
 sqlmodel = "*"
 dask = "*"
 dask-jobqueue = "*"
@@ -42,6 +44,15 @@ openmmtools = "*"
 pydantic-units = "*"
 pytorch = "*"
 datasets = "*"
+bokeh = "3.9.*"
+# probably optional-ish below here
+jupyter = "*"
+nbconvert = "*"
+tensorboard = "*"
+tensorboardx = "*"
+uncertainties = "*"
+openff-packmol = "0.1.*"
+openff-evaluator-base = "*"
 # shims
 pyarrow = "20.*"
 rdkit = "2023.*"
@@ -52,8 +63,6 @@ py312openeye = [ "py312", "openeye", "packmol", "test", "typing" ]
 dev = [ "py312", "openeye", "test", "typing", "dev" ]
 
 [feature.dev.dependencies]
-openff-packmol = "0.1.*"
-openff-evaluator-base = "*"
 pymol-open-source = "*"
 
 [feature.dev.pypi-dependencies]
