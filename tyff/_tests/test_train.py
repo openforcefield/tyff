@@ -6,11 +6,11 @@ import openff.toolkit
 import pydantic
 import pytest
 import torch
-from smee.train import AttributeConfig, ParameterConfig, Trainable
 
 import tyff
 import tyff.converters
 import tyff.utils
+from tyff.train import AttributeConfig, ParameterConfig, Trainable
 
 
 @pytest.fixture()
