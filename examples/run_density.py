@@ -4,7 +4,7 @@ import mdtraj
 import parsl
 from rich import print
 
-from tyff.compute.configs import local_config, slurm_config
+from tyff.compute.configs import hpc3_config, local_config
 from tyff.compute.fetch import fetch_trajectory_paths_from_target
 from tyff.compute.workflow import SimulationWorkflow
 from tyff.datasets.thermoml import ThermoMLDataSet
@@ -19,27 +19,42 @@ base_dir = "density_example"
 
 
 # production on GPU cluster
-if False:
-    with SimulationWorkflow(base_dir, slurm_config("gpu")) as workflow:
-        pass
+if True:
+    with SimulationWorkflow(base_dir, hpc3_config(partition="gpu32")) as workflow:
+        for extra_molecules in range(2):
+            workflow.submit_target(
+                density_target,
+                force_field="openff-2.3.0.offxml",
+                n_molecules=200 + extra_molecules,
+                n_replicates=5,
+            )
+
+        for extra_molecules in range(2):
+            workflow.estimate_target(
+                density_target,
+                force_field="openff-2.3.0.offxml",
+                n_molecules=200 + extra_molecules,
+                n_replicates=5,
+            )
 
 # local testing
-with SimulationWorkflow(base_dir, local_config(max_workers=10)) as workflow:
-    for extra_molecules in range(2):
-        workflow.submit_target(
-            density_target,
-            force_field="openff-2.3.0.offxml",
-            n_molecules=200 + extra_molecules,
-            n_replicates=5,
-        )
+else:
+    with SimulationWorkflow(base_dir, local_config(max_workers=10)) as workflow:
+        for extra_molecules in range(2):
+            workflow.submit_target(
+                density_target,
+                force_field="openff-2.3.0.offxml",
+                n_molecules=200 + extra_molecules,
+                n_replicates=5,
+            )
 
-    for extra_molecules in range(2):
-        workflow.estimate_target(
-            density_target,
-            force_field="openff-2.3.0.offxml",
-            n_molecules=200 + extra_molecules,
-            n_replicates=5,
-        )
+        for extra_molecules in range(2):
+            workflow.estimate_target(
+                density_target,
+                force_field="openff-2.3.0.offxml",
+                n_molecules=200 + extra_molecules,
+                n_replicates=5,
+            )
 
 # TODO: Show how to check status while running
 
