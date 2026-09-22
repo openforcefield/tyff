@@ -238,7 +238,7 @@ class CoordinatesDB(SQLModel, table=True):
     coordinates: bytes = Field(sa_column=Column(LargeBinary), description="Compressed binary coordinates")
     box_vectors: bytes | None = Field(sa_column=Column(LargeBinary), description="Compressed binary box vectors")
     box_metadata: str = Field(default="{}", description="JSON-encoded metadata")
-    created_at: datetime.datetime = Field(
+    created_at: pydantic.NaiveDatetime = Field(
         default_factory=datetime.datetime.now,
         description="Timestamp when the box was created",
     )
@@ -281,7 +281,7 @@ class BoxCoordinates(BaseModel):
     )
 
     # Timestamp
-    created_at: datetime.datetime | None = pydantic.Field(None, description="Timestamp when the box was created")
+    created_at: pydantic.NaiveDatetime | None = pydantic.Field(None, description="Timestamp when the box was created")
 
     class Config:
         arbitrary_types_allowed = True
