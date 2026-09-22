@@ -1,0 +1,508 @@
+"""Helpers for training parameters."""
+
+import typing
+
+import openff.interchange.models
+import pydantic
+import torch
+
+import tyff
+import tyff.utils
+
+PotentialKeyList = list[openff.interchange.models.PotentialKey]
+
+
+def _unflatten_tensors(flat_tensor: torch.Tensor, shapes: list[torch.Size]) -> list[torch.Tensor]:
+    """Unflatten a flat tensor into a list of tensors with the given shapes."""
+
+    tensors = []
+    start_idx = 0
+
+    for shape in shapes:
+        tensors.append(flat_tensor[start_idx : start_idx + shape.numel()].reshape(shape))
+        start_idx += shape.numel()
+
+    return tensors
+
+
+def _tensor_like_or_empty(values: list[float], like: torch.Tensor) -> torch.Tensor:
+    """Create a tensor like `like`, returning an empty one when no values exist."""
+    return tyff.utils.tensor_like(values, like) if values else tyff.utils.tensor_like([], like)
+
+
+def _validate_trainable_keys(
+    cols: list[str],
+    scales: dict[str, float],
+    limits: dict[str, tuple[float | None, float | None]],
+    regularize: dict[str, float],
+) -> None:
+    """Ensure transform dictionaries only reference trainable columns."""
+    if any(key not in cols for key in scales):
+        raise ValueError("cannot scale non-trainable parameters")
+    if any(key not in cols for key in limits):
+        raise ValueError("cannot clamp non-trainable parameters")
+    if any(key not in cols for key in regularize):
+        raise ValueError("cannot regularize non-trainable parameters")
+
+
+def _permissive_key_eq(
+    key1: openff.interchange.models.PotentialKey,
+    key2: openff.interchange.models.PotentialKey,
+) -> bool:
+    """Compare two potential keys for equality, ignoring irrelevant values.
+
+    The fields compared are
+    * `PotentialKey.id`
+    * `PotentialKey.mult`
+    * `PotentialKey.associated_handler`
+    * `PotentialKey.bond_order`
+
+    Fields ignored are
+    * `PotentialKey.cosmetic_attributes`
+    * `PotentialKey.virtual_site_type`
+
+    This is used to determine whether a parameter should be excluded from,
+    or included in, training.
+    """
+    return (
+        key1.id == key2.id
+        and key1.mult == key2.mult
+        and key1.associated_handler == key2.associated_handler
+        and key1.bond_order == key2.bond_order
+    )
+
+
+class AttributeConfig(pydantic.BaseModel):
+    """Configuration for how a potential's attributes should be trained."""
+
+    cols: list[str] = pydantic.Field(description="The parameters to train, e.g. 'k', 'length', 'epsilon'.")
+
+    scales: dict[str, float] = pydantic.Field(
+        {},
+        description="The scales to apply to each parameter, e.g. 'k': 1.0, 'length': 1.0, 'epsilon': 1.0.",
+    )
+    limits: dict[str, tuple[float | None, float | None]] = pydantic.Field(
+        {},
+        description="The min and max values to clamp each parameter within, e.g. "
+        "'k': (0.0, None), 'angle': (0.0, pi), 'epsilon': (0.0, None), where "
+        "none indicates no constraint.",
+    )
+
+    regularize: dict[str, float] = pydantic.Field(
+        {},
+        description="The regularization strength to apply to each parameter, e.g. "
+        "'k': 0.01, 'epsilon': 0.001. Parameters not listed are not regularized.",
+    )
+
+    @pydantic.model_validator(mode="after")
+    def _validate_keys(self):
+        """Ensure that the keys in `scales` and `limits` match `cols`."""
+
+        _validate_trainable_keys(self.cols, self.scales, self.limits, self.regularize)
+
+        return self
+
+
+class ParameterConfig(AttributeConfig):
+    """Configuration for how a potential's parameters should be trained."""
+
+    include: PotentialKeyList | None = pydantic.Field(
+        None,
+        description="The keys (see ``tyff.TensorPotential.parameter_keys`` for "
+        "details) corresponding to specific parameters to be trained. If ``None``, "
+        "all parameters will be trained.",
+    )
+    exclude: PotentialKeyList | None = pydantic.Field(
+        None,
+        description="The keys (see ``tyff.TensorPotential.parameter_keys`` for "
+        "details) corresponding to specific parameters to be excluded from training. "
+        "If ``None``, no parameters will be excluded.",
+    )
+
+    @pydantic.model_validator(mode="after")
+    def _validate_include_exclude(self):
+        """Ensure that the keys in `include` and `exclude` are disjoint."""
+
+        if self.include is not None and self.exclude is not None:
+            included_and_excluded = {
+                key
+                for key in self.include
+                if any(_permissive_key_eq(key, excluded_key) for excluded_key in self.exclude)
+            }
+
+            if included_and_excluded:
+                raise ValueError(f"Cannot include and exclude the same parameter(s): {included_and_excluded}")
+
+        return self
+
+
+class _PreparedBlock(typing.NamedTuple):
+    """Per-block output of ``_prepare`` and ``_prepare_vsites``.
+
+    All index tensors are zero-based relative to this block's own flat value
+    tensor. ``__init__`` is responsible for applying global offsets when
+    combining blocks.
+    """
+
+    values: torch.Tensor
+    shapes: list[torch.Size]
+    unfrozen_idxs: torch.Tensor
+    scales: torch.Tensor
+    clamp_lower: torch.Tensor
+    clamp_upper: torch.Tensor
+    # Always a subset of unfrozen_idxs.
+    regularized_idxs: torch.Tensor
+    regularization_weights: torch.Tensor
+
+
+class Trainable:
+    """A convenient wrapper around a tensor force field that gives greater control
+    over how parameters should be trained.
+
+    This includes imposing limits on the values of parameters, scaling the values
+    so parameters passed to the optimizer have similar magnitudes, and freezing
+    parameters so they are not updated during training.
+    """
+
+    @staticmethod
+    def _prepare_rows(
+        config: AttributeConfig,
+        n_rows: int,
+        all_keys: list[openff.interchange.models.PotentialKey] | None = None,
+    ) -> set[int]:
+        """Determine which rows should be trainable."""
+        if not isinstance(config, ParameterConfig):
+            return set(range(n_rows))
+
+        assert all_keys is not None
+
+        assert len(all_keys) == len(set(all_keys)), "duplicate keys found"
+
+        unfrozen_rows = set()
+        for i, key in enumerate(all_keys):
+            if config.include:
+                if not any(_permissive_key_eq(key, included_key) for included_key in config.include):
+                    continue
+            if config.exclude:
+                if any(_permissive_key_eq(key, excluded_key) for excluded_key in config.exclude):
+                    continue
+
+            unfrozen_rows.add(i)
+
+        return unfrozen_rows
+
+    @staticmethod
+    def _prepare_values(
+        values: torch.Tensor,
+        cols: list[str] | tuple[str, ...],
+        config: AttributeConfig,
+        unfrozen_rows: set[int],
+    ) -> tuple[
+        list[int],
+        list[float],
+        list[float],
+        list[float],
+        list[int],
+        list[float],
+    ]:
+        """Prepare unfrozen indices and transform metadata for a value block.
+
+        Returned indices are zero-based relative to this block's flat value
+        tensor. The caller is responsible for applying any global offset before
+        combining indices across blocks.
+
+        Only unfrozen entries are accumulated, so all returned lists are
+        parallel and require no further post-hoc indexing.
+        """
+        row_width = values.shape[-1]
+        col_to_idx = {col: idx for idx, col in enumerate(cols)}
+
+        unfrozen_idxs = []
+        scales = []
+        clamp_lower = []
+        clamp_upper = []
+        regularized_idxs = []
+        regularization_weights = []
+
+        for row_idx in unfrozen_rows:
+            for col in config.cols:
+                flat_idx = col_to_idx[col] + row_idx * row_width
+
+                unfrozen_idxs.append(flat_idx)
+                scales.append(config.scales.get(col, 1.0))
+
+                lower, upper = config.limits.get(col, (None, None))
+                clamp_lower.append(-torch.inf if lower is None else lower)
+                clamp_upper.append(torch.inf if upper is None else upper)
+
+                if col in config.regularize:
+                    regularized_idxs.append(flat_idx)
+                    regularization_weights.append(config.regularize[col])
+
+        return (
+            unfrozen_idxs,
+            scales,
+            clamp_lower,
+            clamp_upper,
+            regularized_idxs,
+            regularization_weights,
+        )
+
+    @classmethod
+    def _prepare(
+        cls,
+        force_field: tyff.TensorForceField,
+        config: dict[str, AttributeConfig],
+        attr: typing.Literal["parameters", "attributes"],
+    ) -> _PreparedBlock:
+        """Prepare the trainable parameters or attributes for the given force field and
+        configuration.
+
+        Returned indices are zero-based relative to the block's own flat value
+        tensor.
+        """
+        potential_types = sorted(config)
+        potentials = [force_field.potentials_by_type[potential_type] for potential_type in potential_types]
+
+        values = []
+        shapes = []
+
+        unfrozen_idxs: list[int] = []
+        idx_offset = 0
+
+        scales = []
+        clamp_lower = []
+        clamp_upper = []
+
+        regularized_idxs: list[int] = []
+        regularization_weights = []
+
+        for potential_type, potential in zip(potential_types, potentials, strict=True):
+            potential_config = config[potential_type]
+
+            potential_cols = getattr(potential, f"{attr[:-1]}_cols")
+            assert len({*potential_config.cols} - {*potential_cols}) == 0, f"unknown columns: {potential_cols}"
+
+            potential_values = getattr(potential, attr).detach().clone()
+            potential_values_flat = potential_values.flatten()
+
+            shapes.append(potential_values.shape)
+            values.append(potential_values_flat)
+
+            n_rows = 1 if attr == "attributes" else len(potential_values)
+
+            all_keys = None
+            if isinstance(potential_config, ParameterConfig):
+                all_keys = [
+                    openff.interchange.models.PotentialKey(**v.model_dump())
+                    for v in getattr(potential, f"{attr[:-1]}_keys")
+                ]
+
+            unfrozen_rows = cls._prepare_rows(potential_config, n_rows, all_keys)
+            (
+                potential_unfrozen_idxs,
+                potential_scales,
+                potential_clamp_lower,
+                potential_clamp_upper,
+                potential_regularized_idxs,
+                potential_regularization_weights,
+            ) = cls._prepare_values(
+                potential_values,
+                potential_cols,
+                potential_config,
+                unfrozen_rows,
+            )
+
+            unfrozen_idxs.extend(i + idx_offset for i in potential_unfrozen_idxs)
+            scales.extend(potential_scales)
+            clamp_lower.extend(potential_clamp_lower)
+            clamp_upper.extend(potential_clamp_upper)
+            regularized_idxs.extend(i + idx_offset for i in potential_regularized_idxs)
+            regularization_weights.extend(potential_regularization_weights)
+
+            idx_offset += len(potential_values_flat)
+
+        flat_values = (
+            tyff.utils.tensor_like([], force_field.potentials[0].parameters) if len(values) == 0 else torch.cat(values)
+        )
+
+        return _PreparedBlock(
+            values=flat_values,
+            shapes=shapes,
+            unfrozen_idxs=torch.tensor(unfrozen_idxs),
+            scales=tyff.utils.tensor_like(scales, flat_values),
+            clamp_lower=tyff.utils.tensor_like(clamp_lower, flat_values),
+            clamp_upper=tyff.utils.tensor_like(clamp_upper, flat_values),
+            regularized_idxs=torch.tensor(regularized_idxs),
+            regularization_weights=_tensor_like_or_empty(regularization_weights, flat_values),
+        )
+
+    def _prepare_vsites(self, force_field: tyff.TensorForceField, config: ParameterConfig) -> _PreparedBlock:
+        """Prepare the vsite parameters for optimisation.
+
+        Returned indices are zero-based relative to the block's own flat value
+        tensor.
+        """
+        vsite_parameters = force_field.v_sites.parameters.detach().clone()
+        n_rows = vsite_parameters.shape[0]
+        vsite_parameters_flat = vsite_parameters.flatten()
+        # Getting the column names from this dict is a bit awkward but
+        # avoids hard-coding them.
+        vsite_cols = list(force_field.v_sites.default_units().keys())
+
+        all_keys = [openff.interchange.models.PotentialKey(**key.model_dump()) for key in force_field.v_sites.keys]
+        unfrozen_rows = self._prepare_rows(config, n_rows, all_keys)
+        (
+            unfrozen_idxs,
+            vsite_scales,
+            clamp_lower,
+            clamp_upper,
+            regularized_idxs,
+            regularization_weights,
+        ) = self._prepare_values(
+            vsite_parameters,
+            vsite_cols,
+            config,
+            unfrozen_rows,
+        )
+
+        return _PreparedBlock(
+            values=vsite_parameters_flat,
+            shapes=[vsite_parameters.shape],
+            unfrozen_idxs=torch.tensor(unfrozen_idxs),
+            scales=tyff.utils.tensor_like(vsite_scales, vsite_parameters),
+            clamp_lower=tyff.utils.tensor_like(clamp_lower, vsite_parameters),
+            clamp_upper=tyff.utils.tensor_like(clamp_upper, vsite_parameters),
+            regularized_idxs=torch.tensor(regularized_idxs),
+            regularization_weights=_tensor_like_or_empty(regularization_weights, vsite_parameters),
+        )
+
+    def __init__(
+        self,
+        force_field: tyff.TensorForceField,
+        parameters: dict[str, ParameterConfig],
+        attributes: dict[str, AttributeConfig],
+        vsites: ParameterConfig | None = None,
+    ):
+        """
+
+        Args:
+            force_field: The force field to wrap.
+            parameters: Configure which parameters to train.
+            attributes: Configure which attributes to train.
+            vsites: Configure which vsite parameters to train.
+        """
+        self._force_field = force_field
+        self._fit_vsites = False
+
+        param_block = self._prepare(force_field, parameters, "parameters")
+        attr_block = self._prepare(force_field, attributes, "attributes")
+
+        self._param_types = sorted(parameters)
+        self._param_shapes = param_block.shapes
+        self._attr_types = sorted(attributes)
+        self._attr_shapes = attr_block.shapes
+
+        blocks: list[_PreparedBlock] = [param_block, attr_block]
+
+        if vsites is not None:
+            blocks.append(self._prepare_vsites(force_field, vsites))
+            self._fit_vsites = True
+
+        # Each block's indices are zero-based within that block. Apply the
+        # running value-tensor offset at the point of combination so that the
+        # offset arithmetic is in one place and adding further blocks requires
+        # no changes beyond appending to `blocks`.
+        all_values = []
+        all_unfrozen_idxs = []
+        all_scales = []
+        all_clamp_lower = []
+        all_clamp_upper = []
+        all_regularized_idxs = []
+        all_regularization_weights = []
+
+        offset = 0
+        for block in blocks:
+            all_values.append(block.values)
+            all_unfrozen_idxs.append(block.unfrozen_idxs + offset)
+            all_scales.append(block.scales)
+            all_clamp_lower.append(block.clamp_lower)
+            all_clamp_upper.append(block.clamp_upper)
+            all_regularized_idxs.append(block.regularized_idxs + offset)
+            all_regularization_weights.append(block.regularization_weights)
+            offset += len(block.values)
+
+        self._values = torch.cat(all_values)
+        self._unfrozen_idxs = torch.cat(all_unfrozen_idxs).long()
+        self._scales = torch.cat(all_scales)
+        self._clamp_lower = torch.cat(all_clamp_lower)
+        self._clamp_upper = torch.cat(all_clamp_upper)
+
+        # Map global flat indices -> positions within the unfrozen vector.
+        # regularized_idxs are guaranteed to be a subset of unfrozen_idxs,
+        # so no missing-key guard is needed.
+        combined_regularized_idxs = torch.cat(all_regularized_idxs).long()
+        combined_regularization_weights = torch.cat(all_regularization_weights)
+
+        idx_mapping = {idx.item(): i for i, idx in enumerate(self._unfrozen_idxs)}
+        self._regularized_idxs = torch.tensor([idx_mapping[idx.item()] for idx in combined_regularized_idxs]).long()
+        self._regularization_weights = (
+            combined_regularization_weights if len(combined_regularization_weights) > 0 else torch.tensor([])
+        )
+
+    @torch.no_grad()
+    def to_values(self) -> torch.Tensor:
+        """Returns unfrozen parameter and attribute values as a flat tensor."""
+        values_flat = self.clamp(self._values[self._unfrozen_idxs] * self._scales)
+        return values_flat.detach().clone().requires_grad_()
+
+    def to_force_field(self, values_flat: torch.Tensor) -> tyff.TensorForceField:
+        """Returns a force field with the parameters and attributes set to the given
+        values.
+
+        Args:
+            values_flat: A flat tensor of parameter and attribute values. See
+                ``to_values`` for the expected shape and ordering.
+        """
+        potentials = self._force_field.potentials_by_type
+
+        values = self._values.detach().clone()
+        values[self._unfrozen_idxs] = (values_flat / self._scales).clamp(min=self._clamp_lower, max=self._clamp_upper)
+        shapes = self._param_shapes + self._attr_shapes
+
+        if self._fit_vsites:
+            shapes.append(self._force_field.v_sites.parameters.shape)
+
+        values = _unflatten_tensors(values, shapes)
+
+        params = values[: len(self._param_shapes)]
+
+        for potential_type, param in zip(self._param_types, params, strict=True):
+            potentials[potential_type].parameters = param
+
+        attrs = values[len(self._param_shapes) : len(self._param_shapes) + len(self._attr_shapes)]
+
+        for potential_type, attr in zip(self._attr_types, attrs, strict=True):
+            potentials[potential_type].attributes = attr
+
+        if self._fit_vsites:
+            vsite_params = values[len(self._param_shapes) + len(self._attr_shapes) :]
+            self._force_field.v_sites.parameters = vsite_params[0]
+
+        return self._force_field
+
+    @torch.no_grad()
+    def clamp(self, values_flat: torch.Tensor) -> torch.Tensor:
+        """Clamps the given values to the configured min and max values."""
+        return (values_flat / self._scales).clamp(min=self._clamp_lower, max=self._clamp_upper) * self._scales
+
+    @property
+    def regularized_idxs(self) -> torch.Tensor:
+        """The indices (within the tensor returned by to_values)
+        of parameters/attributes to regularize."""
+        return self._regularized_idxs
+
+    @property
+    def regularization_weights(self) -> torch.Tensor:
+        """The regularization weights for parameters/attributes to regularize."""
+        return self._regularization_weights
