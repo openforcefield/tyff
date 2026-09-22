@@ -82,6 +82,11 @@ def test_data_dir() -> pathlib.Path:
     return pathlib.Path(__file__).parent / "data"
 
 
+@pytest.fixture
+def data_dir() -> pathlib.Path:
+    return pathlib.Path(__file__).parent / "data"
+
+
 @pytest.fixture(scope="module")
 def default_force_field() -> openff.toolkit.ForceField:
     """Returns the OpenFF 1.3.0 force field with constraints removed."""
