@@ -102,6 +102,7 @@ for target_paths in trajectory_paths:
 """
 
 try:
+    parsl.clear()
     parsl.dfk().cleanup()
 except Exception:
     pass
