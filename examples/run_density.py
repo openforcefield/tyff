@@ -20,7 +20,7 @@ base_dir = "density_example"
 
 
 if "hpc3" in socket.gethostname():
-    # production runs on HPC (SLURM cluster with GPUs)
+    # production runs on HPC3 (SLURM cluster with GPUs)
     with SimulationWorkflow(
         base_dir,
         hpc3_config(
