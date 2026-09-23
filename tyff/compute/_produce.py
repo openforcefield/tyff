@@ -131,6 +131,12 @@ def _run_production(
 
     logger.info("Running 100,000 steps of MD")
 
+    platform = simulation.context.getPlatform()
+    platform_name = platform.getName()
+
+    # Log or print the result
+    logger.info(f"Using OpenMM platform: {platform_name}")
+
     for index in range(10):
         logger.info(f"Running from step {index * 10_000} to step {(index + 1) * 10_000}")
         simulation.step(10_000)

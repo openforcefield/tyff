@@ -32,23 +32,32 @@ def local_config(max_workers: int = 10):
     )
 
 
-def slurm_config(partition, max_blocks=100):
+def hpc3_config(
+    partition: str = "free-gpu",
+    account: str = "dmobley_omsf_gpu32",
+    max_blocks=100,
+):
     """For production HPC runs."""
     return Config(
         executors=[
             HighThroughputExecutor(
-                label="slurm_gpu",
+                label="gpu_htex",
+                # HPC3 has mostly 4 GPUs/node
+                available_accelerators=4,
+                cpu_affinity="alternating",
+                worker_debug=True,
                 provider=SlurmProvider(
                     partition=partition,
-                    walltime="02:00:00",
-                    nodes_per_block=1,
-                    min_blocks=0,
-                    max_blocks=max_blocks,
+                    account=account,
                     scheduler_options="#SBATCH --gres=gpu:1",
-                    worker_init="source activate myenv",
+                    nodes_per_block=1,
+                    init_blocks=1,
+                    max_blocks=4,
+                    walltime="00:20:00",
                 ),
             )
         ],
-        checkpoint_mode="task_exit",
-        checkpoint_files=get_all_checkpoints(),
+        # "htex_auto_scale" may be better
+        strategy="simple",
+        retries=2,
     )

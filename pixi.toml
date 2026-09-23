@@ -61,6 +61,7 @@ rdkit = "2023.*"
 py312amber = [ "py312", "ambertools", "test", "typing" ]
 py312openeye = [ "py312", "openeye", "packmol", "test", "typing" ]
 dev = [ "py312", "openeye", "test", "typing", "dev" ]
+hpc3 = ["py312", "openeye", "cu130", "packmol" ]
 
 [feature.dev.dependencies]
 pymol-open-source = "*"
@@ -81,6 +82,9 @@ dependencies = { openeye-toolkits = "*" }
 
 [feature.packmol.dependencies]
 packmol = ">=20"
+
+[feature.cu130.dependencies]
+cuda-version = "13.0"
 
 [feature.py312.dependencies]
 python = "3.12.*"
