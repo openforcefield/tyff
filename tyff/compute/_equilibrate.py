@@ -136,6 +136,10 @@ def _run_equilibration(
 
     logger.info("Running 10,000 steps of MD")
 
+    detected_platform = simulation.context.getPlatform().getName()
+
+    logger.info(f"Using OpenMM platform: {detected_platform}")
+
     simulation.step(10_000)
 
     with open(files["topology"].filepath, "w") as f:

@@ -54,6 +54,14 @@ def _minimize_energy(
         unique_molecules=molecules,
     )
 
+    try:
+        platform = openmm.Platform.getPlatformByName("CUDA")
+        logger.info("Trying to use CUDA platform ...")
+    except (openmm.OpenMMException, Exception) as error:
+        platform = openmm.Platform.getPlatformByName("CPU")
+        logger.info(f"Could not use CUDA platform because {error}")
+        logger.info("Trying to use CPU platform ...")
+
     simulation = openmm.app.Simulation(
         topology=topology.to_openmm(),
         system=system,
@@ -62,9 +70,14 @@ def _minimize_energy(
             1.0 / openmm.unit.picosecond,
             1.0 * openmm.unit.femtoseconds,  # TODO: This should be user input
         ),
+        platform=platform,
     )
 
     simulation.context.setPositions(topology.get_positions().to_openmm())
+
+    detected_platform = simulation.context.getPlatform().getName()
+
+    logger.info(f"Using OpenMM platform: {detected_platform}")
 
     original_state = simulation.context.getState(energy=True)
 

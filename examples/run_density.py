@@ -20,7 +20,7 @@ base_dir = "density_example"
 
 # production on GPU cluster
 if True:
-    with SimulationWorkflow(base_dir, hpc3_config(partition="gpu32")) as workflow:
+    with SimulationWorkflow(base_dir, hpc3_config(partition="gpu", account="dmobley_lab_gpu")) as workflow:
         for extra_molecules in range(2):
             workflow.submit_target(
                 density_target,
