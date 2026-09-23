@@ -70,6 +70,7 @@ pytest = "*"
 pytest-cov = "*"
 pytest-xdist = "*"
 pytest-randomly = "*"
+pytest-mock = "*"
 
 [feature.typing.pypi-dependencies]
 mypy = "*"
