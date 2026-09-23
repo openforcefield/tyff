@@ -1,12 +1,12 @@
 [workspace]
-name = "dimsim"
+name = "tyff"
 channels = [ "conda-forge"]
 platforms = [ "linux-64", "osx-arm64" ]
 
 [tasks]
-run_mypy = "python -m mypy -p 'dimsim'"
+run_mypy = "python -m mypy -p 'tyff'"
 run_tests = {
-    cmd = "python -m pytest --durations=10 --cov=dimsim --cov-config=pyproject.toml --cov-append --cov-report=xml --color=yes dimsim/_tests",
+    cmd = "python -m pytest --durations=10 --cov=tyff --cov-config=pyproject.toml --cov-append --cov-report=xml --color=yes tyff/_tests",
     env = {OPENMM_DEFAULT_PLATFORM="CPU"}
 }
 
@@ -25,7 +25,7 @@ dask-kubernetes = "*"
 rdkit-stubs = "*"
 parsl = "*"
 rich = "*"
-dimsim = { path = ".", editable = true }
+tyff = { path = ".", editable = true }
 
 [dependencies]
 openmm = "8.4.*" # need to help Pixi, since conda solve constraints PyPI solve

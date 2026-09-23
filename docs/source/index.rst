@@ -1,9 +1,9 @@
-.. dimsim documentation master file
+.. tyff documentation master file
 
-Welcome to dimsim's documentation!
+Welcome to tyff's documentation!
 ==================================
 
-**dimsim** is a distributed simulation package for Python.
+**tyff** is a distributed simulation package for Python.
 
 .. toctree::
    :maxdepth: 2

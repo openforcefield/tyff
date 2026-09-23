@@ -1,22 +1,22 @@
-# dimsim
+# tyff
 
-[![CI](https://github.com/openforcefield/dimsim/actions/workflows/gh-ci.yaml/badge.svg)](https://github.com/openforcefield/dimsim/actions/workflows/gh-ci.yaml)
-[![Documentation Status](https://readthedocs.org/projects/dimsim/badge/?version=latest)](https://dimsim.readthedocs.io/en/latest/?badge=latest)
-[![codecov](https://codecov.io/gh/openforcefield/dimsim/branch/main/graph/badge.svg)](https://codecov.io/gh/openforcefield/dimsim)
+[![CI](https://github.com/openforcefield/tyff/actions/workflows/gh-ci.yaml/badge.svg)](https://github.com/openforcefield/tyff/actions/workflows/gh-ci.yaml)
+[![Documentation Status](https://readthedocs.org/projects/tyff/badge/?version=latest)](https://tyff.readthedocs.io/en/latest/?badge=latest)
+[![codecov](https://codecov.io/gh/openforcefield/tyff/branch/main/graph/badge.svg)](https://codecov.io/gh/openforcefield/tyff)
 
-Distributed simulation package
+**t**rain **y**our **f**orce **f**ield
 
 ## Overview
 
-`dimsim` is a Python package for distributed simulation.
+`tyff` is a Python package for fitting force fields via tensor representations.
 
 ## Installation
 
 ### From source
 
 ```bash
-git clone https://github.com/openforcefield/dimsim.git
-cd dimsim
+git clone https://github.com/openforcefield/tyff.git
+cd tyff
 pip install -e .
 ```
 
@@ -26,7 +26,7 @@ For development, use conda/mamba to create an environment from the provided file
 
 ```bash
 mamba env create -f devtools/conda-envs/dev.yaml
-mamba activate dimsim-dev
+mamba activate tyff-dev
 pip install -e .
 ```
 
@@ -39,14 +39,14 @@ pip install -e ".[dev]"
 ## Quick Start
 
 ```python
-import dimsim
+import tyff
 
-print(f"dimsim version: {dimsim.__version__}")
+print(f"tyff version: {tyff.__version__}")
 ```
 
 ## Documentation
 
-Full documentation is available at [dimsim.readthedocs.io](https://dimsim.readthedocs.io).
+Full documentation is available at [tyff.readthedocs.io](https://tyff.readthedocs.io).
 
 ## Testing
 
@@ -59,7 +59,7 @@ pytest
 Or with coverage:
 
 ```bash
-pytest --cov=dimsim --cov-report=html
+pytest --cov=tyff --cov-report=html
 ```
 
 ## Contributing

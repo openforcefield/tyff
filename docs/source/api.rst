@@ -1,7 +1,7 @@
 API Reference
 =============
 
-.. automodule:: dimsim
+.. automodule:: tyff
    :members:
    :undoc-members:
    :show-inheritance:

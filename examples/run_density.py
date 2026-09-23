@@ -1,15 +1,16 @@
 import pathlib
+import socket
 
 import mdtraj
 import parsl
 from rich import print
 
-from dimsim.compute.configs import local_config, slurm_config
-from dimsim.compute.fetch import fetch_trajectory_paths_from_target
-from dimsim.compute.workflow import SimulationWorkflow
-from dimsim.datasets.thermoml import ThermoMLDataSet
+from tyff.compute.configs import hpc3_config, local_config
+from tyff.compute.fetch import fetch_trajectory_paths_from_target
+from tyff.compute.workflow import SimulationWorkflow
+from tyff.datasets.thermoml import ThermoMLDataSet
 
-with open("dimsim/_tests/data/thermoml/single_density.xml") as f:
+with open("tyff/_tests/data/thermoml/single_density.xml") as f:
     dataset = ThermoMLDataSet.from_xml(f.read())
     density_target = dataset.properties[0]
 
@@ -18,28 +19,49 @@ job_specs = list()
 base_dir = "density_example"
 
 
-# production on GPU cluster
-if False:
-    with SimulationWorkflow(base_dir, slurm_config("gpu")) as workflow:
-        pass
+if "hpc3" in socket.gethostname():
+    # production runs on HPC3 (SLURM cluster with GPUs)
+    with SimulationWorkflow(
+        base_dir,
+        hpc3_config(
+            partition="gpu",
+            account="dmobley_lab_gpu",
+        ),
+    ) as workflow:
+        for extra_molecules in range(2):
+            workflow.submit_target(
+                density_target,
+                force_field="openff-2.3.0.offxml",
+                n_molecules=200 + extra_molecules,
+                n_replicates=5,
+            )
 
-# local testing
-with SimulationWorkflow(base_dir, local_config(max_workers=10)) as workflow:
-    for extra_molecules in range(2):
-        workflow.submit_target(
-            density_target,
-            force_field="openff-2.3.0.offxml",
-            n_molecules=200 + extra_molecules,
-            n_replicates=5,
-        )
+        for extra_molecules in range(2):
+            workflow.estimate_target(
+                density_target,
+                force_field="openff-2.3.0.offxml",
+                n_molecules=200 + extra_molecules,
+                n_replicates=5,
+            )
 
-    for extra_molecules in range(2):
-        workflow.estimate_target(
-            density_target,
-            force_field="openff-2.3.0.offxml",
-            n_molecules=200 + extra_molecules,
-            n_replicates=5,
-        )
+else:
+    # local testing
+    with SimulationWorkflow(base_dir, local_config(max_workers=10)) as workflow:
+        for extra_molecules in range(2):
+            workflow.submit_target(
+                density_target,
+                force_field="openff-2.3.0.offxml",
+                n_molecules=200 + extra_molecules,
+                n_replicates=5,
+            )
+
+        for extra_molecules in range(2):
+            workflow.estimate_target(
+                density_target,
+                force_field="openff-2.3.0.offxml",
+                n_molecules=200 + extra_molecules,
+                n_replicates=5,
+            )
 
 # TODO: Show how to check status while running
 
@@ -102,6 +124,7 @@ for target_paths in trajectory_paths:
 """
 
 try:
+    parsl.clear()
     parsl.dfk().cleanup()
 except Exception:
     pass

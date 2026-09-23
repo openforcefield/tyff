@@ -4,14 +4,14 @@ Quick Start
 Basic Usage
 -----------
 
-Here's a simple example of using dimsim:
+Here's a simple example of using tyff:
 
 .. code-block:: python
 
-    import dimsim
+    import tyff
 
     # Your code here
-    print(f"dimsim version: {dimsim.__version__}")
+    print(f"tyff version: {tyff.__version__}")
 
 Further Examples
 ----------------

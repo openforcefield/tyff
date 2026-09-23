@@ -1,21 +1,21 @@
-# Contributing to dimsim
+# Contributing to tyff
 
-Thank you for your interest in contributing to dimsim! This document provides guidelines and instructions for contributing.
+Thank you for your interest in contributing to tyff! This document provides guidelines and instructions for contributing.
 
 ## Getting Started
 
 1. Fork the repository on GitHub
 2. Clone your fork locally:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/dimsim.git
-   cd dimsim
+   git clone https://github.com/YOUR_USERNAME/tyff.git
+   cd tyff
    ```
 3. Install the development dependencies:
 
    Using conda/mamba (recommended):
    ```bash
    mamba env create -f devtools/conda-envs/dev.yaml
-   mamba activate dimsim-dev
+   mamba activate tyff-dev
    pip install -e .
    ```
 

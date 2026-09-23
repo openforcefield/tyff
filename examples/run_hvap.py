@@ -1,8 +1,10 @@
-from dimsim.compute.configs import local_config, slurm_config
-from dimsim.compute.workflow import SimulationWorkflow
-from dimsim.datasets.thermoml import ThermoMLDataSet
+import parsl
 
-with open("dimsim/_tests/data/thermoml/single_dhvap.xml") as f:
+from tyff.compute.configs import local_config, slurm_config
+from tyff.compute.workflow import SimulationWorkflow
+from tyff.datasets.thermoml import ThermoMLDataSet
+
+with open("tyff/_tests/data/thermoml/single_dhvap.xml") as f:
     dataset = ThermoMLDataSet.from_xml(f.read())
     dhvap_target = dataset.properties[0]
 
@@ -46,3 +48,9 @@ dHvap estimate for target with below ID, force field openff-2.3.0.offxml, 501 mo
 4455979010545387927019552539812888795231031600148607549210198983695932067156)
         49.096 ± 1.310 kJ/mol
 """
+
+try:
+    parsl.clear()
+    parsl.dfk().cleanup()
+except Exception:
+    pass

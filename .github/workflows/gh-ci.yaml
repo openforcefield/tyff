@@ -25,7 +25,7 @@ jobs:
         matrix:
           os: [macOS-latest, ubuntu-latest]
           environment:
-            - py312
+            - py312amber
             - py312openeye
 
     steps:

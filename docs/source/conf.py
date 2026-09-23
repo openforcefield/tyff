@@ -8,15 +8,15 @@ import sys
 
 sys.path.insert(0, os.path.abspath("../.."))
 
-import dimsim
+import tyff
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "dimsim"
+project = "tyff"
 copyright = "2026, Lily Wang"
 author = "Lily Wang"
-release = dimsim.__version__
+release = tyff.__version__
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

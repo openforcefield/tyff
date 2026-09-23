@@ -4,12 +4,12 @@ Installation
 Installing from source
 ----------------------
 
-To install dimsim from source, clone the repository and install with pip:
+To install tyff from source, clone the repository and install with pip:
 
 .. code-block:: bash
 
-    git clone https://github.com/lilyminium/dimsim.git
-    cd dimsim
+    git clone https://github.com/lilyminium/tyff.git
+    cd tyff
     pip install -e .
 
 Development installation
@@ -26,4 +26,4 @@ This will install all dependencies needed for development, including testing and
 Requirements
 ------------
 
-dimsim requires Python 3.9 or later.
+tyff requires Python 3.9 or later.
