@@ -1,4 +1,5 @@
 import pathlib
+import socket
 
 import mdtraj
 import parsl
@@ -18,9 +19,15 @@ job_specs = list()
 base_dir = "density_example"
 
 
-# production on GPU cluster
-if True:
-    with SimulationWorkflow(base_dir, hpc3_config(partition="gpu", account="dmobley_lab_gpu")) as workflow:
+if "hpc3" in socket.gethostname():
+    # production runs on HPC (SLURM cluster with GPUs)
+    with SimulationWorkflow(
+        base_dir,
+        hpc3_config(
+            partition="gpu",
+            account="dmobley_lab_gpu",
+        ),
+    ) as workflow:
         for extra_molecules in range(2):
             workflow.submit_target(
                 density_target,
@@ -37,8 +44,8 @@ if True:
                 n_replicates=5,
             )
 
-# local testing
 else:
+    # local testing
     with SimulationWorkflow(base_dir, local_config(max_workers=10)) as workflow:
         for extra_molecules in range(2):
             workflow.submit_target(
