@@ -7,41 +7,40 @@ Assume we have run a dimer fit with the adam optimiser first with a lot of itera
 """
 
 import copy
+import datetime
 import functools
 import logging
 import pathlib
-from typing import Optional
-import datetime
+import pprint
 
 import click
 import datasets
 import openff.interchange
 import openff.toolkit
+import torch
+import tqdm
+import yaml
+
 import tyff
 import tyff.converters
-import tyff.utils
-import torch
-import yaml
-import pprint
-
 import tyff.optim
 import tyff.targets
 import tyff.targets.dimers
 import tyff.targets.thermo
 import tyff.train
+import tyff.utils
 import tyff.utils.loss
 import tyff.utils.molecule
 import tyff.utils.reporting
-import tqdm
 
 logger = logging.getLogger(__name__)
 
 
 def apply_parameters(
     force_field: str,
-    energy_dataset: Optional[datasets.Dataset] = None,
-    thermo_dataset: Optional[datasets.Dataset] = None,
-    dimer_dataset: Optional[datasets.Dataset] = None,
+    energy_dataset: datasets.Dataset | None = None,
+    thermo_dataset: datasets.Dataset | None = None,
+    dimer_dataset: datasets.Dataset | None = None,
 ) -> tuple[tyff.TensorForceField, dict[str, tyff.TensorTopology]]:
     unique_smiles = []
     if energy_dataset is not None:
@@ -62,10 +61,7 @@ def apply_parameters(
     force_field, topologies = tyff.converters.convert_interchange(interchanges)
     force_field = force_field.to("cuda")
 
-    topologies = {
-        smiles: topology.to("cuda")
-        for smiles, topology in zip(unique_smiles, topologies)
-    }
+    topologies = {smiles: topology.to("cuda") for smiles, topology in zip(unique_smiles, topologies)}
 
     for top in topologies.values():  # for some reason needed for hessian calc...
         for param in top.parameters.values():
@@ -104,9 +100,7 @@ def report(
 
 
 def to_vdw_only_ff(ff: tyff.TensorForceField) -> tyff.TensorForceField:
-    return tyff.TensorForceField(
-        potentials=[ff.potentials_by_type["vdW"]], v_sites=ff.v_sites
-    )
+    return tyff.TensorForceField(potentials=[ff.potentials_by_type["vdW"]], v_sites=ff.v_sites)
 
 
 def default_dimer_closure(
@@ -128,9 +122,10 @@ def default_dimer_closure(
     Returns:
         The default closure function.
     """
-    import tqdm
-    import more_itertools
     import math
+
+    import more_itertools
+    import tqdm
 
     def closure_fn(
         x: torch.Tensor,
@@ -158,17 +153,13 @@ def default_dimer_closure(
 
             def loss_fn(_x):
                 ff_vdw = to_vdw_only_ff(trainable.to_force_field(_x))
-                y_ref, y_pred = tyff.targets.dimers.predict(
-                    batch, ff_vdw, topologies
-                )
+                y_ref, y_pred = tyff.targets.dimers.predict(batch, ff_vdw, topologies)
                 return torch.sqrt(((y_pred - y_ref) ** 2).mean())
 
             loss = loss_fn(x)
 
             if compute_hessian:
-                hessian = torch.autograd.functional.hessian(
-                    loss_fn, x, vectorize=True, create_graph=False
-                ).detach()
+                hessian = torch.autograd.functional.hessian(loss_fn, x, vectorize=True, create_graph=False).detach()
                 if hess is None:
                     hess = hessian * actuall_batch_size
                 else:
@@ -242,9 +233,10 @@ def smart_liquid_closure(
         compute_gradient: bool,
         compute_hessian: bool,
     ):
-        import openmm.unit
-        from multiprocessing import get_context
         from concurrent.futures import ProcessPoolExecutor, as_completed
+        from multiprocessing import get_context
+
+        import openmm.unit
 
         total_loss, grad, hess = (
             torch.zeros(size=(1,), device=x.device.type),
@@ -254,18 +246,27 @@ def smart_liquid_closure(
 
         entries = [*tyff.utils.dataset.iter_dataset(dataset)]
         # plan the minimum number of required simulations
-        required_simulations, entry_to_simulation = (
-            tyff.targets.thermo._plan_simulations(entries, topologies)
-        )
+        required_simulations, entry_to_simulation = tyff.targets.thermo._plan_simulations(entries, topologies)
         # run the simulations and store the path to the simulation data to be used later
         # detach the tensor to pass through the pool, only used for the simulation the attched tensor is used for the gradient later
         sim_ff = trainable.to_force_field(x.detach().clone())
         frames = {phase: {} for phase in required_simulations.keys()}
-        with ProcessPoolExecutor(max_workers=2, mp_context=get_context('spawn')) as pool:
+        with ProcessPoolExecutor(max_workers=2, mp_context=get_context("spawn")) as pool:
             simulations = []
             for phase, systems in required_simulations.items():
                 for key, system in systems.items():
-                    simulations.append(pool.submit(run_simulation, **{'phase': phase, 'key': key, 'system': system, 'force_field': sim_ff, 'output_dir': output_dir}))
+                    simulations.append(
+                        pool.submit(
+                            run_simulation,
+                            **{
+                                "phase": phase,
+                                "key": key,
+                                "system": system,
+                                "force_field": sim_ff,
+                                "output_dir": output_dir,
+                            },
+                        )
+                    )
             for job in tqdm.tqdm(as_completed(simulations), desc="Running simulations", total=len(simulations)):
                 phase, key, sim_path = job.result()
                 frames[phase][key] = sim_path
@@ -296,28 +297,24 @@ def smart_liquid_closure(
             predicted = []
             for sim_key in keys.values():
                 temperature = sim_key.temperature * openmm.unit.kelvin
-                pressure = (
-                    None
-                    if sim_key.pressure is None
-                    else sim_key.pressure * openmm.unit.atmospheres
-                )
+                pressure = None if sim_key.pressure is None else sim_key.pressure * openmm.unit.atmospheres
                 obs = tyff.targets.thermo._Observables(
                     *tyff.mm.compute_ensemble_averages(
-                            system=required_simulations['bulk'][sim_key],
-                            force_field=force_field,
-                            frames_path=frames['bulk'][sim_key],
-                            temperature=temperature,
-                            pressure=pressure,
+                        system=required_simulations["bulk"][sim_key],
+                        force_field=force_field,
+                        frames_path=frames["bulk"][sim_key],
+                        temperature=temperature,
+                        pressure=pressure,
                     ),
                 )
-                observables['bulk'][sim_key] = obs
+                observables["bulk"][sim_key] = obs
             # print(observables)
             pred, _ = tyff.targets.thermo._predict(
-                        entry=entry,
-                        keys=keys,
-                        observables=observables,
-                        systems=required_simulations,
-                        )
+                entry=entry,
+                keys=keys,
+                observables=observables,
+                systems=required_simulations,
+            )
             predicted.append(pred * type_scale)
             y_pred = torch.stack(predicted)
             print(y_pred)
@@ -391,21 +388,9 @@ def main(
     logger.info(pprint.pprint(data_config))
 
     # load up the dataset options
-    thermo_dataset = (
-        datasets.load_from_disk(data_config["thermo"]["source"])
-        if "thermo" in data_config
-        else None
-    )
-    energy_dataset = (
-        datasets.load_from_disk(data_config["energy"]["source"])
-        if "energy" in data_config
-        else None
-    )
-    dimer_dataset = (
-        datasets.load_from_disk(data_config["dimer"]["source"])
-        if "dimer" in data_config
-        else None
-    )
+    thermo_dataset = datasets.load_from_disk(data_config["thermo"]["source"]) if "thermo" in data_config else None
+    energy_dataset = datasets.load_from_disk(data_config["energy"]["source"]) if "energy" in data_config else None
+    dimer_dataset = datasets.load_from_disk(data_config["dimer"]["source"]) if "dimer" in data_config else None
     thermo_scales = data_config["thermo"]["scales"] if "thermo" in data_config else None
 
     print("Applying parameters")
@@ -418,56 +403,63 @@ def main(
 
     # edit the water assignment matrix to constrain the charges
 
-    water_top = topologies['[O:1]([H:2])[H:3]']
+    water_top = topologies["[O:1]([H:2])[H:3]"]
     # we need to set both hydrogens to the same charge parameter, and the vsite to -2 times it
-    print(water_top.parameters['Electrostatics'].assignment_matrix)
+    print(water_top.parameters["Electrostatics"].assignment_matrix)
     # set the oxygen parameter to not be used
-    water_top.parameters["Electrostatics"].assignment_matrix[0] = water_top.parameters["Electrostatics"].assignment_matrix[0] * 0.0
+    water_top.parameters["Electrostatics"].assignment_matrix[0] = (
+        water_top.parameters["Electrostatics"].assignment_matrix[0] * 0.0
+    )
     # set the hydrogens to be the same
-    water_top.parameters['Electrostatics'].assignment_matrix[2] = water_top.parameters['Electrostatics'].assignment_matrix[1]
+    water_top.parameters["Electrostatics"].assignment_matrix[2] = water_top.parameters[
+        "Electrostatics"
+    ].assignment_matrix[1]
     # set the vsite
-    water_top.parameters['Electrostatics'].assignment_matrix[3] = water_top.parameters['Electrostatics'].assignment_matrix[1] * -2.0
-    print(water_top.parameters['Electrostatics'].assignment_matrix)
-    print(water_top.parameters['Electrostatics'].assignment_matrix @ ff_initial.potentials_by_type["Electrostatics"].parameters)
+    water_top.parameters["Electrostatics"].assignment_matrix[3] = (
+        water_top.parameters["Electrostatics"].assignment_matrix[1] * -2.0
+    )
+    print(water_top.parameters["Electrostatics"].assignment_matrix)
+    print(
+        water_top.parameters["Electrostatics"].assignment_matrix
+        @ ff_initial.potentials_by_type["Electrostatics"].parameters
+    )
     print(ff_initial.v_sites)
     # make sure all tensors on the GPU
-    water_top.to('cuda')
+    water_top.to("cuda")
 
     # print vdW
-    tyff.utils.reporting.print_potential_summary(
-        ff_initial.potentials_by_type["vdW"]
-    )
+    tyff.utils.reporting.print_potential_summary(ff_initial.potentials_by_type["vdW"])
     # # print Electro
     # tyff.utils.reporting.print_potential_summary(
     #     ff_initial.potentials_by_type["Electrostatics"]
     # )
 
     # edit the include sections
-    for k, v in param_config['parameters'].items():
-        for param_type in ['include', 'exclude']:
+    for k, v in param_config["parameters"].items():
+        for param_type in ["include", "exclude"]:
             if param_type in v:
-                param_config['parameters'][k][param_type] = [p for p in ff_initial.potentials_by_type[k].parameter_keys if p.id in v[param_type]]
+                param_config["parameters"][k][param_type] = [
+                    p for p in ff_initial.potentials_by_type[k].parameter_keys if p.id in v[param_type]
+                ]
     print(param_config)
 
     trainable = tyff.train.Trainable(
         copy.deepcopy(ff_initial),
-        parameters={
-            k: tyff.train.ParameterConfig(**v)
-            for k, v in param_config["parameters"].items()
-        },
-        attributes={
-            k: tyff.train.AttributeConfig(**v)
-            for k, v in param_config["attributes"].items()
-        },
+        parameters={k: tyff.train.ParameterConfig(**v) for k, v in param_config["parameters"].items()},
+        attributes={k: tyff.train.AttributeConfig(**v) for k, v in param_config["attributes"].items()},
     )
     # build the combined closure
     logging.info("Creating closure function")
     closures_to_combine = {}
     if thermo_dataset is not None:
-        liquid_dir = output_dir.joinpath('liquid-cache')
+        liquid_dir = output_dir.joinpath("liquid-cache")
         liquid_dir.mkdir(parents=True, exist_ok=True)
         closures_to_combine["thermo"] = smart_liquid_closure(
-            trainable=trainable, topologies=topologies, dataset=thermo_dataset, per_type_scales=thermo_scales, output_dir=liquid_dir
+            trainable=trainable,
+            topologies=topologies,
+            dataset=thermo_dataset,
+            per_type_scales=thermo_scales,
+            output_dir=liquid_dir,
         )
     if dimer_dataset is not None:
         closures_to_combine["dimer"] = default_dimer_closure(
@@ -493,12 +485,8 @@ def main(
         # thermo_dataset=thermo_dataset_val
     )
 
-    lm_config = tyff.optim.LevenbergMarquardtConfig(
-        mode="adaptive", n_convergence_criteria=0, max_steps=10
-    )
-    x_final = tyff.optim.levenberg_marquardt(
-        trainable.to_values(), lm_config, closure_fn, correct_fn, report_fn
-    )
+    lm_config = tyff.optim.LevenbergMarquardtConfig(mode="adaptive", n_convergence_criteria=0, max_steps=10)
+    x_final = tyff.optim.levenberg_marquardt(trainable.to_values(), lm_config, closure_fn, correct_fn, report_fn)
 
     ff_final = trainable.to_force_field(x_final)
     tyff.utils.reporting.print_potential_summary(ff_final.potentials_by_type["vdW"])

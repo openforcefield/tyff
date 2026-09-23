@@ -35,9 +35,9 @@ packages exist to read CSV files, we recommend using the python data analysis
 References
 ----------
 [1]  A. G. Donchev, A. G. Taube, E. Decolvenaere, C. Hargus, R. T. McGibbon,
-      K.-H. Law, B. A. Gregersen, J.-L. Li, K. Palmo, K. Siva, M. Bergdorf, 
+      K.-H. Law, B. A. Gregersen, J.-L. Li, K. Palmo, K. Siva, M. Bergdorf,
       J. L. Klepeis, and D. E. Shaw. "Quantum chemical benchmark database of
-      dimer interaction energies at a “gold standard” level of accuracy" 
+      dimer interaction energies at a “gold standard” level of accuracy"
 
 [2]  R. T. McGibbon, A. G. Taube, A. G. Donchev, K. Siva, F. Fernandez, C. Hargus,
       K.-H. Law, J.L. Klepeis, and D. E. Shaw. "Improving the accuracy of
