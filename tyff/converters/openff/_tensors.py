@@ -13,6 +13,8 @@ def convert_tensor_force_field(
     Convert a tensor force field back into a SMIRNOFF force field, using the
     original force field as a template.
 
+    Does not look at handler-level attributes (1-4 scaling factors, cutoffs, etc.).
+
     Electrostatics / applied partial charges are not updated.
 
     `ImproperTorsionType.idivf` values are ignored.
@@ -24,10 +26,10 @@ def convert_tensor_force_field(
     updated = copy.deepcopy(original_force_field)
 
     for potential in tensor_force_field.potentials:
-        if potential.type in ("Electrostatics"):
+        if potential.type in ("Electrostatics",):
             continue
 
-        if potential.type in ("VirtualSites"):
+        if potential.type in ("VirtualSites",):
             raise NotImplementedError("Virtual site parameters are not yet supported.")
 
         name = str(getattr(potential.type, "value", potential.type))

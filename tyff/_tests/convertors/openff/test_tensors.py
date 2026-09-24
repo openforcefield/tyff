@@ -4,6 +4,7 @@ import math
 import random
 
 import pytest
+import torch
 from openff.toolkit import ForceField, Molecule
 from openff.toolkit.typing.engines.smirnoff.parameters import VirtualSiteType
 
@@ -37,6 +38,21 @@ def tidy_force_field(force_field: ForceField) -> ForceField:
 
 def force_fields_are_equal(force_field_1: ForceField, force_field_2: ForceField) -> bool:
     return hash(tidy_force_field(force_field_1)) == hash(tidy_force_field(force_field_2))
+
+
+def tensor_force_fields_are_equal(
+    tensor_force_field_1: tyff.TensorForceField, tensor_force_field_2: tyff.TensorForceField
+) -> bool:
+    assert tensor_force_field_1.potentials_by_type.keys() == tensor_force_field_2.potentials_by_type.keys()
+
+    for potential1, potential2 in zip(
+        tensor_force_field_1.potentials,
+        tensor_force_field_2.potentials,
+    ):
+        if not torch.allclose(potential1.parameters, potential2.parameters):
+            return False
+
+    return True
 
 
 @pytest.fixture
@@ -100,6 +116,23 @@ def test_convert_no_modifications(phenol, sage):
         copy.deepcopy(tidy_force_field(sage)).to_file("old.offxml")
 
         raise error
+
+
+def test_double_roundtrip(phenol, sage):
+    interchange = sage.create_interchange(phenol.to_topology())
+
+    tensor_force_field, _ = tyff.converters.convert_interchange(interchange)
+
+    new_force_field = tyff.converters.convert_tensor_force_field(
+        sage,
+        tensor_force_field,
+    )
+
+    new_tensor_force_field, _ = tyff.converters.convert_interchange(
+        new_force_field.create_interchange(phenol.to_topology())
+    )
+
+    assert tensor_force_fields_are_equal(tensor_force_field, new_tensor_force_field)
 
 
 @pytest.mark.parametrize(
