@@ -18,11 +18,7 @@ def convert_tensor_force_field(
     updated = copy.deepcopy(original_force_field)
 
     for potential in tensor_force_field.potentials:
-        if potential.type == "Electrostatics":
-            continue
-
-        if potential.type == "ProperTorsions":
-            # TODO: implement this
+        if potential.type in ("Electrostatics", "ProperTorsions", "ImproperTorsions"):
             continue
 
         name = str(getattr(potential.type, "value", potential.type))
@@ -31,7 +27,8 @@ def convert_tensor_force_field(
         for row, key in enumerate(potential.parameter_keys):
             for index, col in enumerate(potential.parameter_cols):
                 value = potential.parameters[row, index].item()
-
+                # skip if parameter is already set to this value?
+                # maybe unnecessarily slow ...
                 setattr(handler[key.id], col, value * potential.parameter_units[index])
 
     return updated

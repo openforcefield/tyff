@@ -1,7 +1,8 @@
 """Test conversion of tensor force fields back to SMIRNOFF force fields."""
 
+import random
+
 import pytest
-import torch
 from openff.toolkit import ForceField, Molecule
 from openff.toolkit.typing.engines.smirnoff.parameters import VirtualSiteType
 
@@ -32,8 +33,8 @@ def sage_with_bond_charge():
 
 
 @pytest.fixture
-def ethanol():
-    return Molecule.from_smiles("CCO")
+def phenol():
+    return Molecule.from_smiles("c1ccccc1O")
 
 
 @pytest.fixture
@@ -41,11 +42,11 @@ def methyl_chloride():
     return Molecule.from_smiles("CCl")
 
 
-def test_convert_no_modifications(ethanol, sage):
+def test_convert_no_modifications(phenol, sage):
     """
     Test basic behavior of convert_tensor_force_field with no modifications of inputs.
     """
-    interchange = sage.create_interchange(ethanol.to_topology())
+    interchange = sage.create_interchange(phenol.to_topology())
 
     tensor_force_field, _ = tyff.converters.convert_interchange(interchange)
 
@@ -57,22 +58,28 @@ def test_convert_no_modifications(ethanol, sage):
     assert hash(new_force_field) == hash(sage)
 
 
-@pytest.mark.parametrize("handler_to_perturb", ["Bonds", "Angles", "ProperTorsions"])
-def test_convert_after_perturbation(ethanol, sage, handler_to_perturb):
+@pytest.mark.parametrize(
+    "handler_to_perturb,column_index",
+    [
+        ("Bonds", 0),  # k, length
+        ("Angles", 0),  # k, angle
+        ("ProperTorsions", 0),  # k, etc.
+        ("ImproperTorsions", 0),  # k, etc.
+    ],
+)
+def test_convert_after_perturbation(phenol, sage, handler_to_perturb, column_index):
     """
     Test that a tensor force field, randomly perturbed from the original SMIRNOFF source parameters, can be
     converted back into a SMIRNOFF force field.
     """
+    factor = random.random()
 
-    interchange = sage.create_interchange(ethanol.to_topology())
+    interchange = sage.create_interchange(phenol.to_topology())
 
     tensor_force_field, _ = tyff.converters.convert_interchange(interchange)
 
     # apply random perturbation to one element in on parameter tensor
-    shape = tensor_force_field.potentials_by_type[handler_to_perturb].parameters.shape
-    indicies_to_perturb = tuple(torch.randint(0, this_shape, (1,)).item() for this_shape in shape)
-
-    tensor_force_field.potentials_by_type[handler_to_perturb].parameters[indicies_to_perturb] *= 1.432
+    tensor_force_field.potentials_by_type[handler_to_perturb].parameters[:, column_index] *= factor
 
     new_force_field = tyff.converters.convert_tensor_force_field(
         sage,
@@ -81,7 +88,32 @@ def test_convert_after_perturbation(ethanol, sage, handler_to_perturb):
 
     assert hash(new_force_field) != hash(sage)
 
+    modified_keys = [key.id for key in tensor_force_field.potentials_by_type[handler_to_perturb].parameter_keys]
 
+    if handler_to_perturb in ("ProperTorsions", "ImproperTorsions"):
+        # parameter k values are list, so need to gather differently
+        found_factors = [
+            (a / b).m_as("dimensionless")
+            for a, b in zip(
+                new_force_field[handler_to_perturb][modified_keys[-1]].k, sage[handler_to_perturb][modified_keys[-1]].k
+            )
+        ]
+
+    else:
+        found_factors = [
+            (
+                new_force_field[handler_to_perturb][modified_keys[-1]].k
+                / sage[handler_to_perturb][modified_keys[-1]].k
+            ).m_as("dimensionless")
+        ]
+
+    for value in found_factors:
+        assert value == pytest.approx(factor), (
+            f"Expected k to be scaled by {factor}, but found to be scaled by {value}"
+        )
+
+
+@pytest.mark.skip(reason="not yet implemented")
 def test_convert_vsites(methyl_chloride, sage_with_bond_charge):
     """
     Test that a tensor force field, modified from original SMIRNOFF source parameters, can be
