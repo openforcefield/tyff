@@ -1,5 +1,6 @@
 """Test conversion of tensor force fields back to SMIRNOFF force fields."""
 
+import math
 import random
 
 import pytest
@@ -10,10 +11,26 @@ import tyff.converters
 
 
 def tidy_force_field(force_field: ForceField) -> ForceField:
+    """Ensure most parameters are expressed in consistent units, to be used before hashing."""
     # work around vdWType squishiness when comparing force fields via hash
     # https://github.com/openforcefield/openff-toolkit/issues/2241
     for parameter in force_field["vdW"].parameters:
         parameter.rmin_half = round(parameter.rmin_half, 12)
+
+    for parameter in force_field["Bonds"].parameters:
+        parameter.k = parameter.k.to("angstrom ** -2 * kilocalorie ** 1 * mole ** -1")
+
+    for parameter in force_field["Angles"].parameters:
+        parameter.angle = parameter.angle.to("radian")
+        parameter.k = parameter.k.to("kilocalorie ** 1 * mole ** -1 * radian ** -2")
+
+    for parameter in force_field["ProperTorsions"].parameters:
+        parameter.phase = [phase.to("radian") for phase in parameter.phase]
+        parameter.k = [k.to("kilocalorie ** 1 * mole ** -1 * radian ** -2") for k in parameter.k]
+
+    for parameter in force_field["ImproperTorsions"].parameters:
+        parameter.phase = [phase.to("radian") for phase in parameter.phase]
+        parameter.k = [k.to("kilocalorie ** 1 * mole ** -1 * radian ** -2") for k in parameter.k]
 
     return force_field
 
@@ -75,38 +92,57 @@ def test_convert_no_modifications(phenol, sage):
     )
 
     try:
-        force_fields_are_equal(new_force_field, sage)
+        assert force_fields_are_equal(new_force_field, sage)
     except AssertionError as error:
         import copy
 
-        new_force_field.to_file("new.offxml")
-        copy.deepcopy(sage).to_file("old.offxml")
+        tidy_force_field(new_force_field).to_file("new.offxml")
+        copy.deepcopy(tidy_force_field(sage)).to_file("old.offxml")
 
         raise error
 
 
 @pytest.mark.parametrize(
-    "handler_to_perturb,column_index",
+    "handler_to_perturb,column_index,column_name",
     [
-        ("Bonds", 0),  # k, length
-        ("Angles", 0),  # k, angle
-        ("ProperTorsions", 0),  # k, etc.
-        ("ImproperTorsions", 0),  # k, etc.
+        ("vdW", 0, "epsilon"),
+        ("vdW", 1, "sigma"),
+        ("Bonds", 0, "k"),
+        ("Bonds", 1, "length"),
+        ("Angles", 0, "k"),
+        ("Angles", 1, "angle"),
+        # skip periodicity and idivf with torsions
+        (
+            "ProperTorsions",
+            0,
+            "k",
+        ),
+        ("ProperTorsions", 2, "phase"),  # angle for proper torsions
+        ("ImproperTorsions", 0, "k"),  # k, etc.
+        ("ImproperTorsions", 2, "phase"),  # angle for improper torsions
     ],
 )
-def test_convert_after_perturbation(methyl_phenyl_disulfide, sage, handler_to_perturb, column_index):
+def test_convert_after_perturbation(methyl_phenyl_disulfide, sage, handler_to_perturb, column_index, column_name):
     """
     Test that a tensor force field, randomly perturbed from the original SMIRNOFF source parameters, can be
     converted back into a SMIRNOFF force field.
     """
-    factor = random.random()
-
     interchange = sage.create_interchange(methyl_phenyl_disulfide.to_topology())
 
     tensor_force_field, _ = tyff.converters.convert_interchange(interchange)
 
     # apply random perturbation to one element in on parameter tensor
-    tensor_force_field.potentials_by_type[handler_to_perturb].parameters[:, column_index] *= factor
+    if column_name != "phase":
+        factor = 1 + 0.5 * random.random()
+
+        tensor_force_field.potentials_by_type[handler_to_perturb].parameters[:, column_index] *= factor
+
+    else:
+        # this is more of an offset than a coefficient, since phase is often 0
+        factor = math.pi / 6
+
+        tensor_force_field.potentials_by_type[handler_to_perturb].parameters[:, column_index] += factor
+        print(tensor_force_field.potentials_by_type[handler_to_perturb].parameters[:, column_index], factor)
 
     new_force_field = tyff.converters.convert_tensor_force_field(
         sage,
@@ -119,18 +155,30 @@ def test_convert_after_perturbation(methyl_phenyl_disulfide, sage, handler_to_pe
 
     if handler_to_perturb in ("ProperTorsions", "ImproperTorsions"):
         # parameter k values are list, so need to gather differently
-        found_factors = [
-            (a / b).m_as("dimensionless")
+        if column_name == "k":
+            found_factors = [
+                (a / b).m_as("dimensionless")
+                for a, b in zip(
+                    getattr(new_force_field[handler_to_perturb][modified_keys[-1]], column_name),
+                    getattr(sage[handler_to_perturb][modified_keys[-1]], column_name),
+                )
+            ]
+        elif column_name == "phase":
+            # special case of offset instead of multipliciative perturbation
             for a, b in zip(
-                new_force_field[handler_to_perturb][modified_keys[-1]].k, sage[handler_to_perturb][modified_keys[-1]].k
-            )
-        ]
+                getattr(new_force_field[handler_to_perturb][modified_keys[-1]], column_name),
+                getattr(sage[handler_to_perturb][modified_keys[-1]], column_name),
+            ):
+                assert ((a - b).m_as("radian")) % math.pi == pytest.approx(factor)
+
+            # exit early for this special case
+            return
 
     else:
         found_factors = [
             (
-                new_force_field[handler_to_perturb][modified_keys[-1]].k
-                / sage[handler_to_perturb][modified_keys[-1]].k
+                getattr(new_force_field[handler_to_perturb][modified_keys[-1]], column_name)
+                / getattr(sage[handler_to_perturb][modified_keys[-1]], column_name)
             ).m_as("dimensionless")
         ]
 
