@@ -1,4 +1,3 @@
-import openff.interchange
 import openff.toolkit
 from openff.toolkit.utils.exceptions import ParameterLookupError
 

@@ -164,7 +164,7 @@ def test_convert_after_perturbation(methyl_phenyl_disulfide, sage, handler_to_pe
 
     tensor_force_field, _ = tyff.converters.convert_interchange(interchange)
 
-    # apply random perturbation to one element in on parameter tensor
+    # apply random perturbation to one element in one parameter tensor
     if column_name != "phase":
         factor = 1 + 0.5 * random.random()
 
@@ -175,7 +175,6 @@ def test_convert_after_perturbation(methyl_phenyl_disulfide, sage, handler_to_pe
         factor = math.pi / 6
 
         tensor_force_field.potentials_by_type[handler_to_perturb].parameters[:, column_index] += factor
-        print(tensor_force_field.potentials_by_type[handler_to_perturb].parameters[:, column_index], factor)
 
     new_force_field = tyff.converters.convert_tensor_force_field(
         sage,
