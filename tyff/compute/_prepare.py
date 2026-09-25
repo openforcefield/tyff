@@ -30,7 +30,7 @@ def _prepare_openmm_system(
         packed_topology=File(f"{job_dir}/packed_topology.pdb"),
     )
 
-    if pathlib.Path(files["openmm_system"].filepath).exists():
+    if pathlib.Path(files["openmm_system"].filepath).exists() and pathlib.Path(files["interchange"].filepath).exists():
         logger.info(f"File {files['openmm_system'].filepath} already exists, skipping system prep.")
         return {
             "prepared_files": files,
