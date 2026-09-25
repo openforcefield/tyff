@@ -66,26 +66,6 @@ def run_production(
 
 
 @python_app
-def run_density_analysis(
-    job_dir: str,
-) -> dict[str, float]:
-    """Run a naive density analysis of production trajectories. For debugging only, not for tensor fitting."""
-    from tyff.compute._analyze import _run_density_analysis
-
-    return _run_density_analysis(job_dir)
-
-
-@python_app
-def run_dhvap_analysis(
-    job_dirs: list[str],
-) -> dict[str, float]:
-    """Run a naive DHVAP analysis of production trajectories. For debugging only, not for tensor fitting."""
-    from tyff.compute._analyze import _run_dhvap_analysis
-
-    return _run_dhvap_analysis(job_dirs)
-
-
-@python_app
 def create_jacobian(
     job_dir: str,
 ) -> dict[str, float]:

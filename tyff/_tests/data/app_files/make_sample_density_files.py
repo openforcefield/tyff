@@ -2,9 +2,6 @@ import json
 import pathlib
 import random
 
-from rich.pretty import pprint as print
-
-from tyff.compute._analyze import _run_density_analysis
 from tyff.compute._equilibrate import _run_equilibration
 from tyff.compute._minimize import _minimize_energy
 from tyff.compute._pack import _prepare_packed_topology
@@ -70,9 +67,3 @@ production_result = _run_production(
     equilibration_future=equilibration_result,
     job_dir="sample_density",
 )
-
-analysis_result = _run_density_analysis(
-    job_dir="sample_density",
-)
-
-print(analysis_result)
