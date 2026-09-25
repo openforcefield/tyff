@@ -5,6 +5,7 @@ import pathlib
 
 from parsl import File
 
+import tyff.mm
 from tyff.compute._files import (
     EquilibrationFiles,
     MinimizationFiles,
@@ -122,16 +123,25 @@ def _run_equilibration(
         )
     )
 
-    dcd_reporter = openmm.app.DCDReporter(
-        file=files["dcd_trajectory"].filepath,
-        reportInterval=1000,
+    simulation.reporters.append(
+        openmm.app.DCDReporter(
+            file=files["dcd_trajectory"].filepath,
+            reportInterval=1000,
+        )
     )
-
-    simulation.reporters.append(dcd_reporter)
 
     simulation.context.setVelocitiesToTemperature(
         compute_config["temperature"],  # kelvin, but as float
         compute_config["replicate_index"] + 1,
+    )
+
+    simulation.reporters.append(
+        tyff.mm.TensorReporter(
+            output_file=open(files["msgpack_trajectory"].filepath, "ab"),
+            report_interval=1000,
+            beta=1.0 / openmm.unit.kilocalories_per_mole,
+            pressure=pressure * openmm.unit.kilopascal,
+        )
     )
 
     logger.info("Running 10,000 steps of MD")
