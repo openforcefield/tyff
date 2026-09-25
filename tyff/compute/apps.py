@@ -69,6 +69,6 @@ def run_production(
 def create_jacobian(
     job_dir: str,
 ) -> dict[str, float]:
-    from tyff.compute._jacobian import _create_jacobian
+    from tyff.compute._jacobian import _get_ensemble_average_and_jacobian
 
-    return _create_jacobian(job_dir)
+    return _get_ensemble_average_and_jacobian(job_dir)

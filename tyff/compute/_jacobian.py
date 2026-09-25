@@ -7,18 +7,29 @@ import torch
 import tyff
 
 
-def ensemble_average_jacobian(
-    system: tyff.TensorSystem,
-    frames_path: pathlib.Path,
-    temperature: float,
-    pressure: float | None,
-    force_field: tyff.TensorForceField,
+def _get_ensemble_average_and_jacobian(
+    job_dir: str,
 ) -> tuple[dict[str, torch.Tensor], torch.Tensor]:
     import openmm.unit
     import torch
 
     import tyff.mm
     from tyff.mm._ops import _pack_force_field, _unpack_force_field
+    # the arguments we really care about are:
+    #     system: tyff.TensorSystem,
+    #     frames_path: pathlib.Path,
+    #     temperature: float,
+    #     pressure: float | None,
+    #     force_field: tyff.TensorForceField,
+    #
+    # so grab them from scattered files we expect to be in this job directory.
+
+    compute_config = BulkLiquid(**json.load(open(f"{job_dir}/compute_config.json")))  # type: ignore[typeddict-item]
+
+    temperature = compute_config["temperature"]  # kelvin, float
+    pressure = compute_config.get("pressure")  # atmosphere, float | None
+
+    frames_path = f"{job_dir}/production_trajectory.msgpack"
 
     # Use existing tyff packing order, including attributes and optional v-sites.
     tensors, parameter_lookup, attribute_lookup, has_v_sites = _pack_force_field(force_field)
