@@ -4,6 +4,7 @@ from importlib.resources import files
 
 import openmm
 import pytest
+from openff.interchange import Interchange
 from openff.toolkit import Molecule, Topology
 from parsl import File
 
@@ -70,7 +71,7 @@ def test_prepare_openmm_system(packing_future, tmp_path):
 
 def test_short_circuit(packing_future, tmp_path):
     """Test that the function short-circuits if the serialized OpenMM system already exists."""
-    for file in ["openmm_system.xml"]:
+    for file in ["openmm_system.xml", "interchange.json"]:
         shutil.copy(
             str(files("tyff") / f"_tests/data/app_files/sample_density/{file}"),
             str(tmp_path / file),
@@ -83,6 +84,17 @@ def test_short_circuit(packing_future, tmp_path):
 
     assert isinstance(prepare_result["prepared_files"], dict)
     assert isinstance(prepare_result["prepared_files"]["openmm_system"], File)
+    assert isinstance(prepare_result["prepared_files"]["interchange"], File)
+
+    # make sure the serialized Interchange and OpenMM system can be loaded
+    with open(prepare_result["prepared_files"]["interchange"].filepath) as f:
+        interchange = Interchange.model_validate_json(f.read())
+
+    with open(prepare_result["prepared_files"]["openmm_system"].filepath) as f:
+        openmm_system = openmm.XmlSerializer.deserialize(f.read())
+
+    # will fail on virtual sites
+    assert interchange.topology.n_atoms == openmm_system.getNumParticles()
 
     with open(tmp_path / "prepare.log") as f:
         for line in f.readlines():

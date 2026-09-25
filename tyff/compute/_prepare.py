@@ -26,10 +26,11 @@ def _prepare_openmm_system(
 
     files = PreparingFiles(
         openmm_system=File(f"{job_dir}/openmm_system.xml"),
+        interchange=File(f"{job_dir}/interchange.json"),
         packed_topology=File(f"{job_dir}/packed_topology.pdb"),
     )
 
-    if pathlib.Path(files["openmm_system"].filepath).exists():
+    if pathlib.Path(files["openmm_system"].filepath).exists() and pathlib.Path(files["interchange"].filepath).exists():
         logger.info(f"File {files['openmm_system'].filepath} already exists, skipping system prep.")
         return {
             "prepared_files": files,
@@ -45,7 +46,12 @@ def _prepare_openmm_system(
 
     force_field = ForceField(compute_config["force_field"])
 
-    openmm_system = force_field.create_openmm_system(packed_topology)
+    interchange = force_field.create_interchange(packed_topology)
+
+    with open(files["interchange"].filepath, "w") as f:
+        f.write(interchange.model_dump_json())
+
+    openmm_system = interchange.to_openmm()
 
     with open(files["openmm_system"].filepath, "w") as f:
         f.write(openmm.XmlSerializer.serialize(openmm_system))
