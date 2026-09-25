@@ -30,7 +30,7 @@ def _prepare_openmm_system(
         packed_topology=File(f"{job_dir}/packed_topology.pdb"),
     )
 
-    if pathlib.Path(files["openmm_system"].filepath).exists():
+    if pathlib.Path(files["openmm_system"].filepath).exists() and pathlib.Path(files["interchange"].filepath).exists():
         logger.info(f"File {files['openmm_system'].filepath} already exists, skipping system prep.")
         return {
             "prepared_files": files,
@@ -41,7 +41,7 @@ def _prepare_openmm_system(
 
     packed_topology: Topology = Topology.from_pdb(
         file_path=packing_files["packed_topology"].filepath,
-        unique_molecules=[Molecule.from_mapped_smiles(smiles) for smiles in compute_config["smiles"]],
+        unique_molecules=[Molecule.from_smiles(smiles) for smiles in compute_config["smiles"]],
     )
 
     force_field = ForceField(compute_config["force_field"])
