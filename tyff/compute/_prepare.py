@@ -26,6 +26,7 @@ def _prepare_openmm_system(
 
     files = PreparingFiles(
         openmm_system=File(f"{job_dir}/openmm_system.xml"),
+        interchange=File(f"{job_dir}/interchange.json"),
         packed_topology=File(f"{job_dir}/packed_topology.pdb"),
     )
 
@@ -40,12 +41,17 @@ def _prepare_openmm_system(
 
     packed_topology: Topology = Topology.from_pdb(
         file_path=packing_files["packed_topology"].filepath,
-        unique_molecules=[Molecule.from_smiles(smiles) for smiles in compute_config["smiles"]],
+        unique_molecules=[Molecule.from_mapped_smiles(smiles) for smiles in compute_config["smiles"]],
     )
 
     force_field = ForceField(compute_config["force_field"])
 
-    openmm_system = force_field.create_openmm_system(packed_topology)
+    interchange = force_field.create_interchange(packed_topology)
+
+    with open(files["interchange"].filepath, "w") as f:
+        f.write(interchange.model_dump_json())
+
+    openmm_system = interchange.to_openmm()
 
     with open(files["openmm_system"].filepath, "w") as f:
         f.write(openmm.XmlSerializer.serialize(openmm_system))

@@ -47,7 +47,7 @@ def _minimize_energy(
     # this should be in Kelvin
     temperature = compute_config["temperature"]
 
-    molecules = [Molecule.from_smiles(smiles) for smiles in compute_config["smiles"]]
+    molecules = [Molecule.from_mapped_smiles(smiles) for smiles in compute_config["smiles"]]
 
     topology = Topology.from_pdb(
         system_future["prepared_files"]["packed_topology"].filepath,
