@@ -41,7 +41,7 @@ def _prepare_openmm_system(
 
     packed_topology: Topology = Topology.from_pdb(
         file_path=packing_files["packed_topology"].filepath,
-        unique_molecules=[Molecule.from_mapped_smiles(smiles) for smiles in compute_config["smiles"]],
+        unique_molecules=[Molecule.from_smiles(smiles) for smiles in compute_config["smiles"]],
     )
 
     force_field = ForceField(compute_config["force_field"])
