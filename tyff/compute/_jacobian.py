@@ -5,7 +5,7 @@ import json
 import pathlib
 
 import torch
-from openff.toolkit import Interchange
+from openff.interchange import Interchange
 
 from tyff.configs.liquid import BulkLiquid
 
@@ -60,6 +60,9 @@ def _get_ensemble_average_and_jacobian(
 
     # Use existing tyff packing order, including attributes and optional v-sites.
     tensors, parameter_lookup, attribute_lookup, has_v_sites = _pack_force_field(tensor_force_field)
+
+    assert tensors is not None and len(tensors) > 0
+
     parameters = torch.cat([t.detach().reshape(-1) for t in tensors if t is not None]).requires_grad_(True)
     pieces = iter(parameters.split([t.numel() for t in tensors if t is not None]))
     tensors = tuple(None if t is None else next(pieces).reshape(t.shape) for t in tensors)
