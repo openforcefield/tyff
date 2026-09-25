@@ -8,11 +8,49 @@ from rich import print
 from tyff.compute.configs import hpc3_config, local_config
 from tyff.compute.fetch import fetch_trajectory_paths_from_target
 from tyff.compute.workflow import SimulationWorkflow
-from tyff.datasets.thermoml import ThermoMLDataSet
+from tyff.targets.thermo import DataEntry
 
-with open("tyff/_tests/data/thermoml/single_density.xml") as f:
-    dataset = ThermoMLDataSet.from_xml(f.read())
-    density_target = dataset.properties[0]
+density_targets = [
+    DataEntry(**data)
+    for data in [
+        {
+            "id": 74669191270958899039426367776551206167278900382279422138348522811937124722445,
+            "tag": "density",
+            "smiles": ["COCCO"],
+            "x": [1.0],
+            "temperature": 293.15,
+            "pressure": 101.3,
+            "value": 0.9648800000000002,
+            "std": 5.0000000000000016e-05,
+            "units": "gram / milliliter",
+            "source": "",
+        },
+        {
+            "id": "",
+            "tag": "density",
+            "smiles": ["CCC(=O)OC"],
+            "x": [1.0],
+            "temperature": 293.15,
+            "pressure": 101.325,
+            "value": 0.9101800000000002,
+            "std": 0.00045,
+            "units": "gram / milliliter",
+            "source": "",
+        },
+        {
+            "id": "",
+            "tag": "density",
+            "smiles": ["C=COCCC"],
+            "x": [1.0],
+            "temperature": 298.15,
+            "pressure": 101.325,
+            "value": 0.7629800000000002,
+            "std": 0.00061,
+            "units": "gram / milliliter",
+            "source": "",
+        },
+    ]
+]
 
 job_specs = list()
 
@@ -28,39 +66,40 @@ if "hpc3" in socket.gethostname():
             account="dmobley_lab_gpu",
         ),
     ) as workflow:
-        for extra_molecules in range(2):
-            workflow.submit_target(
-                density_target,
-                force_field="openff-2.3.0.offxml",
-                n_molecules=200 + extra_molecules,
-                n_replicates=5,
-            )
+        workflow.submit_target_batch(
+            density_targets,
+            force_field="openff-2.3.0.offxml",
+            n_molecules=200,
+            n_replicates=5,
+        )
 
-        for extra_molecules in range(2):
+        for density_target in density_targets:
             workflow.estimate_target(
                 density_target,
                 force_field="openff-2.3.0.offxml",
-                n_molecules=200 + extra_molecules,
+                n_molecules=200,
                 n_replicates=5,
             )
 
 else:
     # local testing
-    with SimulationWorkflow(base_dir, local_config(max_workers=10)) as workflow:
-        for extra_molecules in range(2):
-            workflow.submit_target(
-                density_target,
-                force_field="openff-2.3.0.offxml",
-                n_molecules=200 + extra_molecules,
-                n_replicates=5,
-            )
+    with SimulationWorkflow(
+        base_dir,
+        local_config(max_workers=10),
+    ) as workflow:
+        workflow.submit_target_batch(
+            density_targets,
+            force_field="openff-2.3.0.offxml",
+            n_molecules=200,
+            n_replicates=3,
+        )
 
-        for extra_molecules in range(2):
+        for density_target in density_targets:
             workflow.estimate_target(
                 density_target,
                 force_field="openff-2.3.0.offxml",
-                n_molecules=200 + extra_molecules,
-                n_replicates=5,
+                n_molecules=200,
+                n_replicates=3,
             )
 
 # TODO: Show how to check status while running
@@ -71,10 +110,10 @@ trajectory_paths = [
         base_dir=base_dir,
         target=density_target,
         force_field="openff-2.3.0.offxml",
-        n_molecules=200 + extra_molecules,
-        n_replicates=5,
+        n_molecules=200,
+        n_replicates=3,
     )
-    for extra_molecules in range(2)
+    for density_target in density_targets
 ]
 print(trajectory_paths)
 """
