@@ -1,10 +1,6 @@
 """Compute the ensemble average(s) and Jacobian matrix associated with a job."""
 
-import pathlib
-
 import torch
-
-import tyff
 
 
 def _get_ensemble_average_and_jacobian(
