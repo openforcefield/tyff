@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import torch
 from parsl import python_app
 
 from tyff.compute._equilibrate import EquilibrationConfig
@@ -87,8 +88,9 @@ def run_dhvap_analysis(
 
 @python_app
 def create_jacobian(
+    production_future: dict[str, ProductionFiles],
     job_dir: str,
-) -> dict[str, float]:
+) -> tuple[dict[str, torch.Tensor], torch.Tensor]:
     from tyff.compute._jacobian import _get_ensemble_average_and_jacobian
 
-    return _get_ensemble_average_and_jacobian(job_dir)
+    return _get_ensemble_average_and_jacobian(production_future, job_dir)

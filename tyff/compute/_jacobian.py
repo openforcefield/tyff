@@ -7,10 +7,12 @@ import pathlib
 import torch
 from openff.interchange import Interchange
 
+from tyff.compute._files import ProductionFiles
 from tyff.configs.liquid import BulkLiquid
 
 
 def _get_ensemble_average_and_jacobian(
+    production_future: dict[str, ProductionFiles],
     job_dir: str,
 ) -> tuple[dict[str, torch.Tensor], torch.Tensor]:
     import openmm.unit
@@ -18,6 +20,10 @@ def _get_ensemble_average_and_jacobian(
 
     import tyff.mm
     from tyff.mm._ops import _pack_force_field, _unpack_force_field
+
+    # try to safeguard against the previous step failing
+    assert pathlib.Path(production_future["simulation_files"]["msgpack_trajectory"].filepath).exists()
+
     # the arguments we really care about are:
     #     system: tyff.TensorSystem,
     #     frames_path: pathlib.Path,

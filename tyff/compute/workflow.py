@@ -5,6 +5,7 @@ from collections.abc import Sequence
 
 import numpy
 import parsl
+import torch
 from parsl import File
 from rich import print
 
@@ -12,6 +13,7 @@ from tyff.compute._files import (
     ProductionFiles,
 )
 from tyff.compute.apps import (
+    create_jacobian,
     minimize_energy,
     prepare_openmm_system,
     prepare_packed_topology,
@@ -194,12 +196,12 @@ class SimulationWorkflow:
 
         return results
 
-    def _run_liquid_workflow(self, compute_config: BaseComputeConfig) -> dict[str, str | dict[str, ProductionFiles]]:
+    def _run_liquid_workflow(self, compute_config: BaseComputeConfig) -> tuple[dict[str, torch.Tensor], torch.Tensor]:
         return self._common_run(
             compute_config=compute_config,
         )
 
-    def _run_gas_workflow(self, compute_config: BaseComputeConfig) -> dict[str, str | dict[str, ProductionFiles]]:
+    def _run_gas_workflow(self, compute_config: BaseComputeConfig) -> tuple[dict[str, torch.Tensor], torch.Tensor]:
         assert compute_config["n_molecules"] == 1, (
             f"Gas workflow only supports single-molecule simulations, but got {compute_config['n_molecules']=}"
             f"and, more generally, {compute_config=}"
@@ -209,7 +211,7 @@ class SimulationWorkflow:
             compute_config=compute_config,
         )
 
-    def _common_run(self, compute_config: BaseComputeConfig) -> dict[str, str | dict[str, ProductionFiles]]:
+    def _common_run(self, compute_config: BaseComputeConfig) -> tuple[dict[str, torch.Tensor], torch.Tensor]:
         """Common code in _run_liquid_workflow and _run_gas_workflow."""
         job_id = make_job_id(compute_config)
         job_dir = get_job_paths(self.base_dir, job_id)["root"]
@@ -225,7 +227,7 @@ class SimulationWorkflow:
                 indent=4,
             )
 
-        if pathlib.Path(job_dir, "production_trajectory.dcd").exists():
+        if pathlib.Path(job_dir, "ensemble_averages.json").exists():
             logger.info(f"short-circuiting {job_id}!")
             # already done, skip
 
@@ -263,7 +265,9 @@ class SimulationWorkflow:
             job_dir=job_dir,
         )
 
-        return {"job_id": job_id, "future": production_future}
+        jacobian_future = create_jacobian(production_future=production_future, job_dir=job_dir)
+
+        return {"job_id": job_id, "future": jacobian_future}
 
     def shutdown(self):
         parsl.clear()
