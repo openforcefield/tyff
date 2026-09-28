@@ -113,7 +113,7 @@ class SimulationWorkflow:
 
     def submit_target_batch(
         self,
-        target_configs: list[DataEntry],
+        target_configs: Sequence[DataEntry],
         force_field: str,
         n_molecules: int,
         n_replicates: int = 3,

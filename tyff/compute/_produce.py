@@ -7,6 +7,7 @@ import openmm
 import openmm.app
 from parsl import File
 
+import tyff.mm
 from tyff.compute._files import (
     EquilibrationFiles,
     ProductionFiles,
@@ -97,6 +98,11 @@ def _run_production(
 
         assert barostat.getDefaultPressure() is not None
 
+    pressure = compute_config.get("pressure", None)
+
+    if pressure is None:
+        raise PressureNotDefinedError("Trying to set up NPT simulation but no pressure defined.")
+
     simulation.context.setVelocitiesToTemperature(
         compute_config["temperature"],  # kelvin, but as float
         compute_config["replicate_index"] + 1,
@@ -117,17 +123,21 @@ def _run_production(
         )
     )
 
-    dcd_reporter = openmm.app.DCDReporter(
-        file=files["dcd_trajectory"].filepath,
-        reportInterval=1000,
+    simulation.reporters.append(
+        openmm.app.DCDReporter(
+            file=files["dcd_trajectory"].filepath,
+            reportInterval=1000,
+        )
     )
 
-    simulation.reporters.append(dcd_reporter)
-
-    pressure = compute_config.get("pressure", None)
-
-    if pressure is None:
-        raise PressureNotDefinedError("Trying to set up NPT simulation but no pressure defined.")
+    simulation.reporters.append(
+        tyff.mm.TensorReporter(
+            output_file=files["msgpack_trajectory"].filepath,
+            report_interval=1000,
+            beta=1.0 / (openmm.unit.MOLAR_GAS_CONSTANT_R * compute_config["temperature"] * openmm.unit.kelvin),
+            pressure=pressure * openmm.unit.kilopascal,
+        )
+    )
 
     logger.info("Running 100,000 steps of MD")
 
