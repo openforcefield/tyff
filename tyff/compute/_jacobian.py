@@ -43,6 +43,8 @@ def _get_ensemble_average_and_jacobian(
         with open(interchange_path) as f:
             interchanges.append(Interchange.model_validate_json(f.read()))
 
+    assert len(interchanges) > 0, "Did not find single-molecule `Interchange`s as expected"
+
     tensor_force_field, tensor_topologies = tyff.converters.convert_interchange(interchanges)
 
     # must sync this up with tyff/compute/_pack.py if ever either change
