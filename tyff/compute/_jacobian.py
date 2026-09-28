@@ -89,13 +89,13 @@ def _get_ensemble_average_and_jacobian(
         None if pressure is None else pressure * openmm.unit.atmosphere,
     )
 
-    # Jacobian rows follow sorted observable names; columns follow packed parameters.
-    jacobian = torch.stack(
-        [
-            torch.autograd.grad(means[name], parameters, retain_graph=True)[0]
-            for name in sorted(means)  # Claude doesn't think this should be sorted
-        ]
-    )
+    # originally this was sorted(means),
+    # https://github.com/openforcefield/tyff/pull/173#discussion_r4126720329
+    #
+    # if that's changed back then we need to make BOTH
+    # the jacobian and ensemble averages sorted in serialization AND return values
+    # https://github.com/openforcefield/tyff/pull/173#discussion_r4126720329
+    jacobian = torch.stack([torch.autograd.grad(means[name], parameters, retain_graph=True)[0] for name in means])
 
     # save ensemble averages and jacobian in each job dir, consider revisiting this decision in the future
     with open(f"{job_dir}/ensemble_averages.json", "w") as f:
