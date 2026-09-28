@@ -137,9 +137,9 @@ def _run_equilibration(
 
     simulation.reporters.append(
         tyff.mm.TensorReporter(
-            output_file=open(files["msgpack_trajectory"].filepath, "ab"),
+            output_file=files["msgpack_trajectory"].filepath,
             report_interval=1000,
-            beta=1.0 / openmm.unit.kilocalories_per_mole,
+            beta=1.0 / (openmm.unit.MOLAR_GAS_CONSTANT_R * compute_config["temperature"] * openmm.unit.kelvin),
             pressure=pressure * openmm.unit.kilopascal,
         )
     )
