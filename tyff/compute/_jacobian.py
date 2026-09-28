@@ -90,4 +90,12 @@ def _get_ensemble_average_and_jacobian(
             for name in sorted(means)  # Claude doesn't think this should be sorted
         ]
     )
+
+    # save ensemble averages and jacobian in each job dir, consider revisiting this decision in the future
+    with open(f"{job_dir}/ensemble_averages.json", "w") as f:
+        json.dump({name: value.detach().tolist() for name, value in means.items()}, f)
+
+    with open(f"{job_dir}/jacobian.pt", "wb") as f:
+        torch.save(jacobian.detach(), f)
+
     return {name: value.detach() for name, value in means.items()}, jacobian.detach()
