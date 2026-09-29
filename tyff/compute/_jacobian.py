@@ -44,7 +44,7 @@ def _get_ensemble_average_and_jacobian(
         unique_molecule_index = int(pathlib.Path(interchange_path).stem.split("single_molecule_interchange_")[-1])
 
         # hope we're loading up the single-molecule interchanges in the same order as we have unique molecules
-        assert unique_molecule_index == path_index
+        assert unique_molecule_index == path_index, (unique_molecule_index, path_index)
 
         with open(interchange_path) as f:
             interchanges.append(Interchange.model_validate_json(f.read()))
