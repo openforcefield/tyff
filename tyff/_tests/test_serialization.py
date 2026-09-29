@@ -1,13 +1,15 @@
-import torch
 import json
 
+import torch
+
+from tyff._models import TensorForceField
 from tyff._serialization import dump_tensor_force_field, load_tensor_force_field
 from tyff._tests.utils import system_from_smiles
-from tyff._models import TensorForceField
+
 
 def compare_tensor_force_fields(
-        force_field1:  TensorForceField,
-        force_field2: TensorForceField,
+    force_field1: TensorForceField,
+    force_field2: TensorForceField,
 ) -> bool:
     if len(force_field1.potentials) != len(force_field2.potentials):
         print("Failed: Number of potentials do not match")
@@ -21,13 +23,19 @@ def compare_tensor_force_fields(
             print(f"Failed: potential fn mismatch ({potential1.fn} != {potential2.fn})")
             return False
         if potential1.parameter_units != potential2.parameter_units:
-            print(f"Failed: potential parameter_units mismatch ({potential1.parameter_units} != {potential2.parameter_units})")
+            print(
+                f"Failed: potential parameter_units mismatch ({potential1.parameter_units} != {potential2.parameter_units})"
+            )
             return False
         if potential1.parameter_keys != potential2.parameter_keys:
-            print(f"Failed: potential parameter_keys mismatch ({potential1.parameter_keys} != {potential2.parameter_keys})")
+            print(
+                f"Failed: potential parameter_keys mismatch ({potential1.parameter_keys} != {potential2.parameter_keys})"
+            )
             return False
         if potential1.parameter_cols != potential2.parameter_cols:
-            print(f"Failed: potential parameter_cols mismatch ({potential1.parameter_cols} != {potential2.parameter_cols})")
+            print(
+                f"Failed: potential parameter_cols mismatch ({potential1.parameter_cols} != {potential2.parameter_cols})"
+            )
             return False
         if not torch.equal(potential1.parameters, potential2.parameters):
             print("Failed: potential parameters are not equal")
@@ -44,13 +52,18 @@ def compare_tensor_force_fields(
                 return False
 
         if potential1.attribute_units != potential2.attribute_units:
-            print(f"Failed: potential attribute_units mismatch ({potential1.attribute_units} != {potential2.attribute_units})")
+            print(
+                f"Failed: potential attribute_units mismatch ({potential1.attribute_units} != {potential2.attribute_units})"
+            )
             return False
         if potential1.attribute_cols != potential2.attribute_cols:
-            print(f"Failed: potential attribute_cols mismatch ({potential1.attribute_cols} != {potential2.attribute_cols})")
+            print(
+                f"Failed: potential attribute_cols mismatch ({potential1.attribute_cols} != {potential2.attribute_cols})"
+            )
             return False
 
     return True
+
 
 def test_basic_serialization(default_force_field, tmp_path):
 
