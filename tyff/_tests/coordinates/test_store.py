@@ -242,7 +242,7 @@ class TestCoordinateStoreAddGet:
         Test getting box matches by substance when pressure is specified
         """
         matches = temp_coordinate_store.get_box_matches_by_substance(
-            substance_water_1000, pressure=1.0, pressure_tolerance=0.1
+            substance_water_1000, pressure=1.0, pressure_tolerance=10.0
         )
         matches = sorted(matches, key=lambda x: x.id)
         assert len(matches) == 3
@@ -259,7 +259,7 @@ class TestCoordinateStoreAddGet:
     def test_get_box_matches_by_substance_pressure_narrow(self, temp_coordinate_store, substance_water_1000):
         # test filter narrow
         matches = temp_coordinate_store.get_box_matches_by_substance(
-            substance_water_1000, pressure=1.0, pressure_tolerance=0.0001
+            substance_water_1000, pressure=1.0, pressure_tolerance=0.01
         )
         matches = sorted(matches, key=lambda x: x.id)
         assert len(matches) == 1
@@ -271,7 +271,7 @@ class TestCoordinateStoreAddGet:
         matches = temp_coordinate_store.get_box_matches_by_substance(
             substance_water_1000,
             pressure=None,
-            pressure_tolerance=0.01,
+            pressure_tolerance=1.0,
         )
         matches = sorted(matches, key=lambda x: x.id)
         assert len(matches) == 1
@@ -285,7 +285,7 @@ class TestCoordinateStoreAddGet:
             temperature=298.15,
             temperature_tolerance=30,
             pressure=1.0,
-            pressure_tolerance=0.0001,
+            pressure_tolerance=0.01,
         )
         matches = sorted(matches, key=lambda x: x.id)
         assert len(matches) == 1

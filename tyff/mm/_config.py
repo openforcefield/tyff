@@ -55,7 +55,7 @@ class SimulationConfig(pydantic.BaseModel):
         ...,
         description="The temperature to simulate at.",
     )
-    pressure: OpenMMQuantity[openmm.unit.atmospheres] | None = pydantic.Field(
+    pressure: OpenMMQuantity[openmm.unit.kilopascal] | None = pydantic.Field(
         ...,
         description="The pressure to simulate at, or none to run in NVT.",
     )

@@ -170,7 +170,7 @@ def test_default_config(phase, pressure, expected_n_mols):
     if pressure is None:
         assert config.production.pressure is None
     else:
-        assert config.production.pressure.value_in_unit(openmm.unit.atmosphere) == pressure
+        assert config.production.pressure.value_in_unit(openmm.unit.kilopascal) == pressure
 
 
 def test_select_config():
@@ -189,14 +189,14 @@ def test_select_config():
                 ),
                 tyff.mm.SimulationConfig(
                     temperature=300 * openmm.unit.kelvin,
-                    pressure=1 * openmm.unit.atmosphere,
+                    pressure=1 * openmm.unit.kilopascal,
                     n_steps=100000,
                     timestep=2.0 * openmm.unit.femtosecond,
                 ),
             ],
             production=tyff.mm.SimulationConfig(
                 temperature=300 * openmm.unit.kelvin,
-                pressure=1 * openmm.unit.atmosphere,
+                pressure=1 * openmm.unit.kilopascal,
                 n_steps=1000000,
                 timestep=2.0 * openmm.unit.femtosecond,
             ),
@@ -204,11 +204,11 @@ def test_select_config():
         )
     }
     temperature = 298.15 * openmm.unit.kelvin
-    pressure = 1 * openmm.unit.atmosphere
+    pressure = 1 * openmm.unit.kilopascal
     config = select_config(
         phase="bulk",
         temperature=temperature.value_in_unit(openmm.unit.kelvin),
-        pressure=pressure.value_in_unit(openmm.unit.atmosphere),
+        pressure=pressure.value_in_unit(openmm.unit.kilopascal),
         custom_config=custom_config,
     )
     # make sure the custom config has been changed to match what was requested
@@ -635,7 +635,7 @@ def test_create_from_evaluator(data_dir):
         "smiles_b": "[O:1]([H:2])[H:3]",
         "x_b": 0.51732,
         "temperature": 298.15,
-        "pressure": 0.999753269183321,
+        "pressure": 101.3,
         "value": 0.99,
         "std": 0.000505,
         "units": "g/mL",

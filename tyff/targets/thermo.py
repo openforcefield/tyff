@@ -103,7 +103,7 @@ class SimulationKey(typing.NamedTuple):
     temperature: float
     """The temperature [K] at which the simulation was run."""
     pressure: float | None
-    """The pressure [atm] at which the simulation was run."""
+    """The pressure [kPa] at which the simulation was run."""
 
 
 class SimulationConfig(pydantic.BaseModel):
@@ -223,7 +223,7 @@ def create_from_evaluator(dataset_file: pathlib.Path) -> datasets.Dataset:
             "smiles_b": smiles_b,
             "x_b": x_b,
             "temperature": temp.to(unit.kelvin).m,
-            "pressure": pressure.to(unit.atm).m,
+            "pressure": pressure.to(unit.kilopascal).m,
             "value": value.to(default_units).m,
             "units": _prop_units[prop_type],
             "std": std.to(default_units).m,
@@ -297,13 +297,13 @@ def _bulk_config(temperature: float, pressure: float) -> SimulationConfig:
 
     Args:
         temperature: The temperature [K] at which to run the simulation.
-        pressure: The pressure [atm] at which to run the simulation.
+        pressure: The pressure [kPa] at which to run the simulation.
 
     Returns:
         The default simulation configuration.
     """
     temperature = temperature * openmm.unit.kelvin
-    pressure = pressure * openmm.unit.atmosphere
+    pressure = pressure * openmm.unit.kilopascal
 
     return SimulationConfig(
         max_mols=256,
@@ -340,7 +340,7 @@ def _vacuum_config(temperature: float, pressure: float | None) -> SimulationConf
 
     Args:
         temperature: The temperature [K] at which to run the simulation.
-        pressure: The pressure [atm] at which to run the simulation.
+        pressure: The pressure [kPa] at which to run the simulation.
 
     Returns:
         The default simulation configuration.
@@ -376,7 +376,7 @@ def default_config(phase: Phase, temperature: float, pressure: float | None) -> 
     Args:
         phase: The phase to return the default configuration for.
         temperature: The temperature [K] at which to run the simulation.
-        pressure: The pressure [atm] at which to run the simulation.
+        pressure: The pressure [kPa] at which to run the simulation.
 
     Returns:
         The default simulation configuration.
@@ -404,7 +404,7 @@ def select_config(
     Args:
         phase: The phase of the simulation.
         temperature: The temperature [K] at which to run the simulation.
-        pressure: The pressure [atm] at which to run the simulation
+        pressure: The pressure [kPa] at which to run the simulation
         custom_config: The custom simulation configuration for each phase.
 
     Returns:
@@ -417,7 +417,7 @@ def select_config(
         config = custom_config[phase]
         # edit the config with the desired temperature and pressure
         temperature = temperature * openmm.unit.kelvin
-        pressure = pressure * openmm.unit.atmosphere
+        pressure = pressure * openmm.unit.kilopascal
         for stage in config.equilibrate:
             if isinstance(stage, tyff.mm.SimulationConfig):
                 stage.temperature = temperature
@@ -540,7 +540,7 @@ def _compute_observables(
     cached_path = None if cached_dir is None else cached_dir / traj_name
 
     temperature = key.temperature * openmm.unit.kelvin
-    pressure = None if key.pressure is None else key.pressure * openmm.unit.atmospheres
+    pressure = None if key.pressure is None else key.pressure * openmm.unit.kilopascals
 
     if cached_path is not None and cached_path.exists():
         with contextlib.suppress(tyff.mm.NotEnoughSamplesError):
