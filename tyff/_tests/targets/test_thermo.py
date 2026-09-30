@@ -635,7 +635,7 @@ def test_create_from_evaluator(data_dir):
         "smiles_b": "[O:1]([H:2])[H:3]",
         "x_b": 0.51732,
         "temperature": 298.15,
-        "pressure": 0.999753269183321,
+        "pressure": 101.3,
         "value": 0.99,
         "std": 0.000505,
         "units": "g/mL",
