@@ -184,7 +184,7 @@ class CoordinateStore:
         self,
         box: BoxCoordinates,
         temperature_tolerance: float = 1.0,
-        pressure_tolerance: float = 0.001,
+        pressure_tolerance: float = 0.1,
     ) -> list[BoxCoordinates]:
         """
         Retrieve boxes matching the given box's composition and optional state filters.
@@ -272,7 +272,7 @@ class CoordinateStore:
         temperature: float | None = None,
         temperature_tolerance: float = 1.0,
         pressure: float | None = None,
-        pressure_tolerance: float = 0.001,
+        pressure_tolerance: float = 0.1,
     ) -> BoxCoordinates | None:
         """
         Retrieve the lowest energy box matching the given box's composition,
