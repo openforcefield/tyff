@@ -141,13 +141,13 @@ class CoordinateStore:
         temperature_tolerance : float | None, optional
             Temperature tolerance in Kelvin.
         pressure : float | None, optional
-            Target pressure in atm.  # NOTE: elsewhere tyff uses kPa
+            Target pressure in kPa.
             If pressure is None and pressure_tolerance is None,
             this filter will be ignored.
             If pressure is None and pressure_tolerance is not None,
             this will be treated as a filter for any pressure.
         pressure_tolerance : float | None, optional
-            Pressure tolerance in atm
+            Pressure tolerance in kPa
 
         Returns
         -------
@@ -195,10 +195,8 @@ class CoordinateStore:
             BoxCoordinates object defining the composition to match
         temperature_tolerance : float, default=1.0
             Temperature tolerance in Kelvin
-        pressure_tolerance : float, default=0.001
-            Pressure tolerance in atm
-        pressure_tolerance : float, default=0.001
-            Pressure tolerance in atm
+        pressure_tolerance : float, default=0.1
+            Pressure tolerance in kPa
 
         Returns
         -------
@@ -239,9 +237,9 @@ class CoordinateStore:
         temperature_tolerance : float, default=1.0
             Temperature tolerance in Kelvin
         pressure : float | None, optional
-            Target pressure in atm (None = ignore)
-        pressure_tolerance : float, default=0.001
-            Pressure tolerance in atm
+            Target pressure in kPa (None = ignore)
+        pressure_tolerance : float, default=0.1
+            Pressure tolerance in kPa
 
         Returns
         -------
@@ -291,9 +289,9 @@ class CoordinateStore:
         temperature_tolerance : float, default=1.0
             Temperature tolerance in Kelvin
         pressure : float | None, optional
-            Target pressure in atm (None = ignore)
-        pressure_tolerance : float, default=0.001
-            Pressure tolerance in atm
+            Target pressure in kPa (None = ignore)
+        pressure_tolerance : float, default=0.1
+            Pressure tolerance in kPa
 
         Returns
         -------
