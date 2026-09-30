@@ -120,6 +120,24 @@ class SimulationWorkflow:
         n_molecules: int,
         n_replicates: int = 3,
     ):
+        import openff.toolkit
+
+        unique_smiles = set()
+
+        for target in target_configs:
+            for smiles_ in target["smiles"]:
+                unique_smiles.add(smiles_)
+
+        (pathlib.Path(self.base_dir) / "interchanges").mkdir(exist_ok=True)
+
+        force_field_ = openff.toolkit.ForceField(force_field)
+        for index, unique_smiles_ in enumerate(unique_smiles):
+            interchange = force_field_.create_interchange(
+                openff.toolkit.Molecule.from_smiles(unique_smiles_).to_topology()
+            )
+
+            with open(pathlib.Path(self.base_dir) / "interchanges" / f"interchange_{index}.json", "w") as f:
+                f.write(interchange.model_dump_json())
 
         return [
             result

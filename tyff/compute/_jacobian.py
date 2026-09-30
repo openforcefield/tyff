@@ -13,6 +13,7 @@ from tyff.configs.liquid import BulkLiquid
 
 def _get_ensemble_average_and_jacobian(
     production_future: dict[str, ProductionFiles],
+    interchanges_path: str | pathlib.Path,
     job_dir: str,
 ) -> tuple[dict[str, torch.Tensor], torch.Tensor]:
     import openmm.unit
@@ -40,8 +41,8 @@ def _get_ensemble_average_and_jacobian(
     pressure = compute_config.get("pressure")  # atmosphere, float | None
 
     interchanges = []
-    for path_index, interchange_path in enumerate(glob.glob(f"{job_dir}/single_molecule_interchange_*.json")):
-        unique_molecule_index = int(pathlib.Path(interchange_path).stem.split("single_molecule_interchange_")[-1])
+    for path_index, interchange_path in enumerate(sorted(glob.glob(f"{interchanges_path}/interchange_*.json"))):
+        unique_molecule_index = int(pathlib.Path(interchange_path).stem.split("interchange_")[-1])
 
         # hope we're loading up the single-molecule interchanges in the same order as we have unique molecules
         assert unique_molecule_index == path_index, (unique_molecule_index, path_index)
