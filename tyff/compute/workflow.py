@@ -9,6 +9,7 @@ import torch
 from parsl import File
 from rich import print
 
+import tyff.converters
 from tyff.compute._files import (
     ProductionFiles,
 )
@@ -84,6 +85,8 @@ class SimulationWorkflow:
         n_molecules: int,
         n_replicates: int = 3,
     ):
+        # TODO: Rename?
+        """Submit only one target. Not meant to be called by user, instead use `submit_target_batch`."""
 
         from tyff.compute.prep import (
             _compute_configs_from_data_entry,
@@ -122,22 +125,38 @@ class SimulationWorkflow:
     ):
         import openff.toolkit
 
+        from tyff._serialization import dump_tensor_force_field
+
         unique_smiles = set()
 
         for target in target_configs:
             for smiles_ in target["smiles"]:
                 unique_smiles.add(smiles_)
 
+        # TODO: Probably drop this
         (pathlib.Path(self.base_dir) / "interchanges").mkdir(exist_ok=True)
+
+        interchanges = list()
 
         force_field_ = openff.toolkit.ForceField(force_field)
         for index, unique_smiles_ in enumerate(unique_smiles):
             interchange = force_field_.create_interchange(
                 openff.toolkit.Molecule.from_smiles(unique_smiles_).to_topology()
             )
+            interchanges.append(interchange)
 
             with open(pathlib.Path(self.base_dir) / "interchanges" / f"interchange_{index}.json", "w") as f:
                 f.write(interchange.model_dump_json())
+
+        (pathlib.Path(self.base_dir) / "reference_force_field").mkdir(exist_ok=True)
+
+        # this is a "global"/reference force field composed from all unique molecules,
+        # don't think we're going to use the topologies here
+        reference_force_field, _tensor_topologies = tyff.converters.convert_interchange(interchanges)
+
+        # dumps a JSON representation of the tensor representation of the SMIRNOFF force field
+        with open(pathlib.Path(self.base_dir) / "reference_force_fields" / f"{force_field}.json", "w") as f:
+            dump_tensor_force_field(reference_force_field, f)
 
         return [
             result
@@ -283,7 +302,11 @@ class SimulationWorkflow:
             job_dir=job_dir,
         )
 
-        jacobian_future = create_jacobian(production_future=production_future, job_dir=job_dir)
+        jacobian_future = create_jacobian(
+            production_future=production_future,
+            job_dir=job_dir,
+            reference_force_field=(self.base_dir / "reference_force_fields" / f"{compute_config['force_field']}.json"),
+        )
 
         return {"job_id": job_id, "future": jacobian_future}
 
