@@ -87,7 +87,6 @@ def _get_ensemble_average_and_jacobian(
         "Did not find same number of single-molecule `Interchange`s as number of unique molecules in compute config"
     )
 
-    # make this argument just the "local" interchanges
     local_force_field, tensor_topologies = tyff.converters.convert_interchange(interchanges)
 
     # before this job (before ANY job ... ) a "global" tensor force field representing the entire data set
@@ -99,6 +98,7 @@ def _get_ensemble_average_and_jacobian(
     # also hope ordering lines up
     n_copies = [int(n_molecules * x) for x in compute_config["x"]]
 
+    # this is on the scale of just this job
     system = tyff.TensorSystem(
         topologies=tensor_topologies,
         n_copies=n_copies,
