@@ -1,0 +1,504 @@
+{
+    "potentials": [
+        {
+            "type": "Angles",
+            "fn": "k/2*(theta-angle)**2",
+            "parameters": {
+                "dtype": "float64",
+                "shape": [
+                    3,
+                    2
+                ],
+                "data": [
+                    208.3323698809,
+                    1.8967821629564474,
+                    99.69215181429,
+                    1.9137632227721684,
+                    39.43190954937,
+                    1.8850428776126391
+                ]
+            },
+            "parameter_keys": [
+                {
+                    "id": "[#1:1]-[#8:2]-[*:3]",
+                    "mult": null,
+                    "associated_handler": "Angles",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                },
+                {
+                    "id": "[*:1]~[#6X4:2]-[*:3]",
+                    "mult": null,
+                    "associated_handler": "Angles",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                },
+                {
+                    "id": "[#1:1]-[#6X4:2]-[#1:3]",
+                    "mult": null,
+                    "associated_handler": "Angles",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                }
+            ],
+            "parameter_cols": [
+                "k",
+                "angle"
+            ],
+            "parameter_units": [
+                "kilocalorie / mole / radian ** 2",
+                "radian"
+            ],
+            "attributes": null,
+            "attribute_cols": null,
+            "attribute_units": null,
+            "exceptions": null
+        },
+        {
+            "type": "Bonds",
+            "fn": "k/2*(r-length)**2",
+            "parameters": {
+                "dtype": "float64",
+                "shape": [
+                    4,
+                    2
+                ],
+                "data": [
+                    1141.303841414,
+                    0.9711625418245,
+                    457.9258198725,
+                    1.525970013793,
+                    680.7664447835,
+                    1.092445809108,
+                    394.308606076,
+                    1.422597694743
+                ]
+            },
+            "parameter_keys": [
+                {
+                    "id": "[#8:1]-[#1:2]",
+                    "mult": null,
+                    "associated_handler": "Bonds",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                },
+                {
+                    "id": "[#6X4:1]-[#6X4:2]",
+                    "mult": null,
+                    "associated_handler": "Bonds",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                },
+                {
+                    "id": "[#6X4:1]-[#1:2]",
+                    "mult": null,
+                    "associated_handler": "Bonds",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                },
+                {
+                    "id": "[#6:1]-[#8:2]",
+                    "mult": null,
+                    "associated_handler": "Bonds",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                }
+            ],
+            "parameter_cols": [
+                "k",
+                "length"
+            ],
+            "parameter_units": [
+                "kilocalorie / angstrom ** 2 / mole",
+                "angstrom"
+            ],
+            "attributes": null,
+            "attribute_cols": null,
+            "attribute_units": null,
+            "exceptions": null
+        },
+        {
+            "type": "Electrostatics",
+            "fn": "coul",
+            "parameters": {
+                "dtype": "float64",
+                "shape": [
+                    11,
+                    1
+                ],
+                "data": [
+                    -0.834,
+                    0.417,
+                    -0.09628999854127566,
+                    0.1324500006934007,
+                    -0.6029300081233183,
+                    0.3982599986096223,
+                    0.01728000243504842,
+                    0.01728000243504842,
+                    0.044650000830491386,
+                    0.044650000830491386,
+                    0.044650000830491386
+                ]
+            },
+            "parameter_keys": [
+                {
+                    "id": "[#1]-[#8X2H2+0:1]-[#1]",
+                    "mult": 0,
+                    "associated_handler": "LibraryCharges",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                },
+                {
+                    "id": "[#1:1]-[#8X2H2+0]-[#1]",
+                    "mult": 0,
+                    "associated_handler": "LibraryCharges",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                },
+                {
+                    "id": "[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]",
+                    "mult": 0,
+                    "associated_handler": "NAGLChargesHandler",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                },
+                {
+                    "id": "[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]",
+                    "mult": 1,
+                    "associated_handler": "NAGLChargesHandler",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                },
+                {
+                    "id": "[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]",
+                    "mult": 2,
+                    "associated_handler": "NAGLChargesHandler",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                },
+                {
+                    "id": "[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]",
+                    "mult": 3,
+                    "associated_handler": "NAGLChargesHandler",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                },
+                {
+                    "id": "[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]",
+                    "mult": 4,
+                    "associated_handler": "NAGLChargesHandler",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                },
+                {
+                    "id": "[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]",
+                    "mult": 5,
+                    "associated_handler": "NAGLChargesHandler",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                },
+                {
+                    "id": "[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]",
+                    "mult": 6,
+                    "associated_handler": "NAGLChargesHandler",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                },
+                {
+                    "id": "[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]",
+                    "mult": 7,
+                    "associated_handler": "NAGLChargesHandler",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                },
+                {
+                    "id": "[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]",
+                    "mult": 8,
+                    "associated_handler": "NAGLChargesHandler",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                }
+            ],
+            "parameter_cols": [
+                "charge"
+            ],
+            "parameter_units": [
+                "elementary_charge"
+            ],
+            "attributes": {
+                "dtype": "float64",
+                "shape": [
+                    5
+                ],
+                "data": [
+                    0.0,
+                    0.0,
+                    0.8333333333,
+                    1.0,
+                    9.0
+                ]
+            },
+            "attribute_cols": [
+                "scale_12",
+                "scale_13",
+                "scale_14",
+                "scale_15",
+                "cutoff"
+            ],
+            "attribute_units": [
+                "dimensionless",
+                "dimensionless",
+                "dimensionless",
+                "dimensionless",
+                "angstrom"
+            ],
+            "exceptions": null
+        },
+        {
+            "type": "ProperTorsions",
+            "fn": "k*(1+cos(periodicity*theta-phase))",
+            "parameters": {
+                "dtype": "float64",
+                "shape": [
+                    6,
+                    4
+                ],
+                "data": [
+                    0.4017369753905,
+                    3.0,
+                    0.0,
+                    1.0,
+                    0.2405111530649,
+                    1.0,
+                    0.0,
+                    1.0,
+                    0.1007185121278,
+                    3.0,
+                    0.0,
+                    1.0,
+                    0.4345168281108,
+                    1.0,
+                    0.0,
+                    1.0,
+                    1.270955113618,
+                    3.0,
+                    0.0,
+                    3.0,
+                    0.2392094731239,
+                    3.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "parameter_keys": [
+                {
+                    "id": "[#6X4:1]-[#6X4:2]-[#8X2H1:3]-[#1:4]",
+                    "mult": 0,
+                    "associated_handler": "ProperTorsions",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                },
+                {
+                    "id": "[#6X4:1]-[#6X4:2]-[#8X2H1:3]-[#1:4]",
+                    "mult": 1,
+                    "associated_handler": "ProperTorsions",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                },
+                {
+                    "id": "[#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]",
+                    "mult": 0,
+                    "associated_handler": "ProperTorsions",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                },
+                {
+                    "id": "[#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]",
+                    "mult": 1,
+                    "associated_handler": "ProperTorsions",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                },
+                {
+                    "id": "[*:1]-[#6X4:2]-[#8X2:3]-[#1:4]",
+                    "mult": 0,
+                    "associated_handler": "ProperTorsions",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                },
+                {
+                    "id": "[#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]",
+                    "mult": 0,
+                    "associated_handler": "ProperTorsions",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                }
+            ],
+            "parameter_cols": [
+                "k",
+                "periodicity",
+                "phase",
+                "idivf"
+            ],
+            "parameter_units": [
+                "kilocalorie / mole",
+                "dimensionless",
+                "radian",
+                "dimensionless"
+            ],
+            "attributes": null,
+            "attribute_cols": null,
+            "attribute_units": null,
+            "exceptions": null
+        },
+        {
+            "type": "vdW",
+            "fn": "4*epsilon*((sigma/r)**12-(sigma/r)**6)",
+            "parameters": {
+                "dtype": "float64",
+                "shape": [
+                    7,
+                    2
+                ],
+                "data": [
+                    0.1521,
+                    3.1507,
+                    0.0,
+                    1.0,
+                    0.1205698919337,
+                    3.387971073428982,
+                    0.1353608645661,
+                    3.0237212943083334,
+                    1.232058709465e-05,
+                    0.5330964133900715,
+                    0.01891997418601,
+                    2.5586037672254887,
+                    0.01336628116185,
+                    2.6639341018377585
+                ]
+            },
+            "parameter_keys": [
+                {
+                    "id": "[#1]-[#8X2H2+0:1]-[#1]",
+                    "mult": null,
+                    "associated_handler": "vdW",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                },
+                {
+                    "id": "[#1:1]-[#8X2H2+0]-[#1]",
+                    "mult": null,
+                    "associated_handler": "vdW",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                },
+                {
+                    "id": "[#6X4:1]",
+                    "mult": null,
+                    "associated_handler": "vdW",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                },
+                {
+                    "id": "[#8X2H1+0:1]",
+                    "mult": null,
+                    "associated_handler": "vdW",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                },
+                {
+                    "id": "[#1:1]-[#8]",
+                    "mult": null,
+                    "associated_handler": "vdW",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                },
+                {
+                    "id": "[#1:1]-[#6X4]-[#7,#8,#9,#16,#17,#35]",
+                    "mult": null,
+                    "associated_handler": "vdW",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                },
+                {
+                    "id": "[#1:1]-[#6X4]",
+                    "mult": null,
+                    "associated_handler": "vdW",
+                    "bond_order": null,
+                    "virtual_site_type": null,
+                    "cosmetic_attributes": {}
+                }
+            ],
+            "parameter_cols": [
+                "epsilon",
+                "sigma"
+            ],
+            "parameter_units": [
+                "kilocalorie / mole",
+                "angstrom"
+            ],
+            "attributes": {
+                "dtype": "float64",
+                "shape": [
+                    6
+                ],
+                "data": [
+                    0.0,
+                    0.0,
+                    0.5,
+                    1.0,
+                    9.0,
+                    1.0
+                ]
+            },
+            "attribute_cols": [
+                "scale_12",
+                "scale_13",
+                "scale_14",
+                "scale_15",
+                "cutoff",
+                "switch_width"
+            ],
+            "attribute_units": [
+                "dimensionless",
+                "dimensionless",
+                "dimensionless",
+                "dimensionless",
+                "angstrom",
+                "angstrom"
+            ],
+            "exceptions": null
+        }
+    ],
+    "v_sites": null
+}
