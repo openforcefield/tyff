@@ -2,8 +2,11 @@ import json
 import pathlib
 import random
 
+import openff.toolkit
 from rich.pretty import pprint as print
 
+import tyff.converters
+from tyff._serialization import dump_tensor_force_field
 from tyff.compute._analyze import _run_density_analysis
 from tyff.compute._equilibrate import _run_equilibration
 from tyff.compute._minimize import _minimize_energy
@@ -15,9 +18,11 @@ from tyff.configs.targets.thermo import DataEntry
 
 pathlib.Path("sample_density/").mkdir(exist_ok=True)
 
+FORCE_FIELD = "openff-2.3.0.offxml"
+
 target = DataEntry(
     **{
-        "id": random.randint(10**15, 10**16 - 1),
+        "id": random.randint(10**15, 10**16 - 1),  # TODO: Make this the real ID
         "tag": "density",
         "x": [0.5, 0.5],
         "smiles": [
@@ -33,12 +38,28 @@ target = DataEntry(
     }
 )
 
-with open("sample_density/target_config.json", "w") as target_config:
-    json.dump(target, target_config, indent=4)
+with open("sample_density/target_config.json", "w") as target_config_file:
+    json.dump(target, target_config_file, indent=4)
+
+smirnoff_force_field = openff.toolkit.ForceField(FORCE_FIELD)
+
+interchanges = [
+    smirnoff_force_field.create_interchange(openff.toolkit.Molecule.from_smiles(smiles_).to_topology())
+    for smiles_ in target["smiles"]
+]
+
+for index, interchange in enumerate(interchanges):
+    with open(f"sample_density/single_molecule_interchange_{index}.json", "w") as f:
+        f.write(interchange.model_dump_json())
+
+reference_force_field, _ = tyff.converters.convert_interchange(interchanges)
+
+with open("sample_density/ref.ff.json", "w") as reference_force_field_file:
+    json.dump(dump_tensor_force_field(reference_force_field), reference_force_field_file, indent=4)
 
 compute = _make_liquid_density_compute_configs(
     data_entry=target,
-    force_field="openff-2.3.0.offxml",
+    force_field=FORCE_FIELD,
     n_molecules=200,
 )[0][0]
 

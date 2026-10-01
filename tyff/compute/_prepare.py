@@ -48,6 +48,17 @@ def _prepare_openmm_system(
 
     interchange = force_field.create_interchange(packed_topology)
 
+    # later analysis depends on making `TensorSystem`s from `TensoTopology`s which may prefer
+    # to be constructed from single-molecule `Interchange`s, so just save them out here
+    #
+    # ordering is quite fragile, but hope order of smiles list never changes mid-job
+    for unique_molecule_index, unique_molecule in enumerate(
+        [Molecule.from_smiles(smiles) for smiles in compute_config["smiles"]]
+    ):
+        single_molecule_interchange = force_field.create_interchange(unique_molecule.to_topology())
+        with open(f"{job_dir}/single_molecule_interchange_{unique_molecule_index}.json", "w") as f:
+            f.write(single_molecule_interchange.model_dump_json())
+
     with open(files["interchange"].filepath, "w") as f:
         f.write(interchange.model_dump_json())
 
