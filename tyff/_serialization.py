@@ -49,7 +49,6 @@ def _load_exceptions(v: Any) -> dict[tuple[int, int], int] | None:
     return {(i, j): val for i, j, val in v}
 
 
-# tyff/_serialization.py
 def dump_tensor_potential(p: TensorPotential) -> dict:
     return {
         "type": p.type,
@@ -82,9 +81,6 @@ def load_tensor_potential(d: dict) -> TensorPotential:
     )
 
 
-# tyff/_serialization.py (continued)
-
-
 def dump_tensor_vsites(v: TensorVSites) -> dict:
     return {
         "keys": [k.model_dump() for k in v.keys],
@@ -95,7 +91,7 @@ def dump_tensor_vsites(v: TensorVSites) -> dict:
 
 def load_tensor_vsites(d: dict) -> TensorVSites:
     return TensorVSites(
-        keys=[openff.interchange.models.VirtualSiteKey.model_validate(k) for k in d["keys"]],
+        keys=[openff.interchange.models.PotentialKey.model_validate(k) for k in d["keys"]],
         weights=[_load_tensor(w) for w in d["weights"]],
         parameters=_load_tensor(d["parameters"]),
     )
