@@ -148,15 +148,16 @@ class SimulationWorkflow:
             with open(pathlib.Path(self.base_dir) / "interchanges" / f"interchange_{index}.json", "w") as f:
                 f.write(interchange.model_dump_json())
 
-        (pathlib.Path(self.base_dir) / "reference_force_field").mkdir(exist_ok=True)
+        self._reference_force_fields = pathlib.Path(self.base_dir) / "reference_force_fields"
+        pathlib.Path(self._reference_force_fields).mkdir(exist_ok=True)
 
         # this is a "global"/reference force field composed from all unique molecules,
         # don't think we're going to use the topologies here
         reference_force_field, _tensor_topologies = tyff.converters.convert_interchange(interchanges)
 
         # dumps a JSON representation of the tensor representation of the SMIRNOFF force field
-        with open(pathlib.Path(self.base_dir) / "reference_force_fields" / f"{force_field}.json", "w") as f:
-            dump_tensor_force_field(reference_force_field, f)
+        with open(self._reference_force_fields / f"{force_field}.json", "w") as f:
+            json.dump(dump_tensor_force_field(reference_force_field), f)
 
         return [
             result
@@ -305,7 +306,7 @@ class SimulationWorkflow:
         jacobian_future = create_jacobian(
             production_future=production_future,
             job_dir=job_dir,
-            reference_force_field=(self.base_dir / "reference_force_fields" / f"{compute_config['force_field']}.json"),
+            reference_force_field=self._reference_force_fields / f"{compute_config['force_field']}.json",
         )
 
         return {"job_id": job_id, "future": jacobian_future}
