@@ -1,9 +1,8 @@
-from typing import Annotated, Any
+from typing import Any
 
 import openff.interchange
 import openff.units
 import torch
-from pydantic import BeforeValidator, PlainSerializer
 
 from tyff._models import TensorForceField, TensorPotential, TensorVSites
 
@@ -13,30 +12,7 @@ def _dump_tensor(t: torch.Tensor) -> dict[str, Any]:
 
 
 def _load_tensor(v: Any) -> torch.Tensor:
-    if isinstance(v, torch.Tensor):
-        return v
     return torch.tensor(v["data"], dtype=getattr(torch, v["dtype"])).reshape(v["shape"])
-
-
-_Tensor = Annotated[torch.Tensor, BeforeValidator(_load_tensor), PlainSerializer(_dump_tensor)]
-
-
-def _dump_sparse(t: torch.Tensor) -> dict[str, Any]:
-    t = t.coalesce()
-    return {
-        "dtype": str(t.dtype).removeprefix("torch."),
-        "shape": list(t.shape),
-        "indices": t.indices().tolist(),
-        "values": t.values().tolist(),
-    }
-
-
-def _load_sparse(v: Any) -> torch.Tensor:
-    if isinstance(v, torch.Tensor):
-        return v
-    return torch.sparse_coo_tensor(
-        v["indices"], v["values"], size=v["shape"], dtype=getattr(torch, v["dtype"])
-    ).coalesce()
 
 
 def _dump_exceptions(d: dict[tuple[int, int], int] | None) -> list[tuple[int, int, int]] | None:
