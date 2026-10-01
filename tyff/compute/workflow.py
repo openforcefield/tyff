@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)  # module-level logger, not root
 
 
 class SimulationWorkflow:
-    def __init__(self, base_dir, parsl_config):
+    def __init__(self, base_dir: str, parsl_config: parsl.Config):
         from tyff.compute._logging import _set_up_logger
 
         pathlib.Path(base_dir).mkdir(exist_ok=True)
@@ -306,7 +306,7 @@ class SimulationWorkflow:
         jacobian_future = create_jacobian(
             production_future=production_future,
             job_dir=job_dir,
-            reference_force_field=self._reference_force_fields / f"{compute_config['force_field']}.json",
+            reference_force_field_path=self._reference_force_fields / f"{compute_config['force_field']}.json",
         )
 
         return {"job_id": job_id, "future": jacobian_future}

@@ -88,9 +88,12 @@ def run_dhvap_analysis(
 
 @python_app
 def create_jacobian(
-    production_future: dict[str, ProductionFiles],
-    job_dir: str,
+    production_future: dict[str, ProductionFiles], job_dir: str, reference_force_field_path: str
 ) -> tuple[dict[str, torch.Tensor], torch.Tensor]:
     from tyff.compute._jacobian import _get_ensemble_average_and_jacobian
 
-    return _get_ensemble_average_and_jacobian(production_future, job_dir)
+    return _get_ensemble_average_and_jacobian(
+        production_future,
+        job_dir,
+        reference_force_field_path,
+    )

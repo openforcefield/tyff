@@ -46,7 +46,7 @@ def _gather_from_reference(local: tyff.TensorForceField, reference: tyff.TensorF
 def _get_ensemble_average_and_jacobian(
     production_future: dict[str, ProductionFiles],
     job_dir: str,
-    reference_force_field=str | pathlib.Path,
+    reference_force_field_path: str,
 ) -> tuple[dict[str, torch.Tensor], torch.Tensor]:
     import openmm.unit
     import torch
@@ -91,7 +91,7 @@ def _get_ensemble_average_and_jacobian(
 
     # before this job (before ANY job ... ) a "global" tensor force field representing the entire data set
     # needs to be created and serialized to somewhere root-like, accessible to all jobs
-    reference_force_field = load_tensor_force_field(reference_force_field)
+    reference_force_field = load_tensor_force_field(json.loads(open(reference_force_field_path).read()))
 
     # must sync this up with tyff/compute/_pack.py if ever either change
     n_molecules = compute_config["n_molecules"]
