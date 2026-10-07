@@ -114,7 +114,7 @@ def sample_binary_box_coordinates(sample_substance, sample_coordinates, sample_b
     return BoxCoordinates(
         substance=sample_substance,
         temperature=298.15,
-        pressure=1.0,
+        pressure=101.325,
         force_field_id="openff-2.1.0",
         potential_energy=-1234.56,
         coordinates=sample_coordinates,

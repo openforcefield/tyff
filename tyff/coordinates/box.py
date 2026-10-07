@@ -232,7 +232,7 @@ class CoordinatesDB(SQLModel, table=True):
     )
     n_molecules: int = Field(index=True, description="Total number of molecules in the box")
     temperature: float | None = Field(index=True, description="Temperature in Kelvin")
-    pressure: float | None = Field(index=True, description="Pressure in atm")
+    pressure: float | None = Field(index=True, description="Pressure in kPa")
     force_field_id: str | None = Field(index=True, description="Identifier for the force field used")
     potential_energy: float | None = Field(index=True, description="Potential energy of the system in kcal/mol")
     coordinates: bytes = Field(sa_column=Column(LargeBinary), description="Compressed binary coordinates")
@@ -260,7 +260,7 @@ class BoxCoordinates(BaseModel):
 
     # Thermodynamic state
     temperature: float | None = pydantic.Field(None, description="Temperature in Kelvin")
-    pressure: float | None = pydantic.Field(None, description="Pressure in atm")
+    pressure: float | None = pydantic.Field(None, description="Pressure in kPa")
 
     # Force field identifier
     force_field_id: str | None = pydantic.Field(None, description="Identifier for the force field used")

@@ -29,7 +29,7 @@ def create_test_entry() -> DataEntry:
         smiles=random.sample(STOCK_SMILES, n_components),
         x=x,
         temperature=random.uniform(210.0, 450.0),
-        pressure=1.0,
+        pressure=101.325,
         value=random.uniform(0.1, 2.0),
         std=random.uniform(0.001, 0.05),
         units="g/mL",

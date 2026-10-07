@@ -137,7 +137,7 @@ class TestTensorReporter:
                 output_file=str(tmp_path / "1.msgpack"),
                 report_interval=10,
                 beta=_BETA,
-                pressure=1.0 * openmm.unit.kilopascals,
+                pressure=101.325 * openmm.unit.kilopascals,
             )
 
             simulation.reporters.append(reporter)
@@ -152,7 +152,7 @@ class TestTensorReporter:
                     output_file=output_file,
                     report_interval=10,
                     beta=_BETA,
-                    pressure=1.0 * openmm.unit.kilopascals,
+                    pressure=101.325 * openmm.unit.kilopascals,
                 )
 
                 simulation.reporters.append(tensor_reporter)
@@ -167,7 +167,7 @@ class TestTensorReporter:
             output_file=str(tmp_path / "append.msgpack"),
             report_interval=10,
             beta=_BETA,
-            pressure=1.0 * openmm.unit.kilopascals,
+            pressure=101.325 * openmm.unit.kilopascals,
             append=True,
         )
 
@@ -183,7 +183,7 @@ class TestTensorReporter:
             output_file=str(tmp_path / "append.msgpack"),
             report_interval=10,
             beta=_BETA,
-            pressure=1.0 * openmm.unit.kilopascals,
+            pressure=101.325 * openmm.unit.kilopascals,
             append=append,
         )
 
