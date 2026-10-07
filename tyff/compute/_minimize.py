@@ -40,9 +40,11 @@ def _minimize_energy(
             "simulation_files": files,
         }
 
-    system = openmm.XmlSerializer.deserialize(open(system_future["prepared_files"]["openmm_system"].filepath).read())
+    with open(system_future["prepared_files"]["openmm_system"].filepath) as f:
+        system = openmm.XmlSerializer.deserialize(f.read())
 
-    compute_config: BulkLiquid = BulkLiquid(**json.load(open(f"{job_dir}/compute_config.json")))  # type: ignore[typeddict-item]
+    with open(f"{job_dir}/compute_config.json") as f:
+        compute_config: BulkLiquid = BulkLiquid(**json.load(f))  # type: ignore[typeddict-item]
 
     # this should be in Kelvin
     temperature = compute_config["temperature"]

@@ -38,7 +38,11 @@ def _run_dhvap_analysis(
 ) -> dict[str, float]:
     from openff.units import unit
 
-    configs = {job_dir: json.load(open(f"{job_dir}/compute_config.json")) for job_dir in job_dirs}
+    configs = {}
+
+    for job_dir in job_dirs:
+        with open(f"{job_dir}/compute_config.json") as f:
+            configs[job_dir] = json.load(f)
 
     gas_dir = next(dir for dir, config in configs.items() if config["tag"] == "gas")
     liquid_dir = next(dir for dir, config in configs.items() if config["tag"] == "liquid")

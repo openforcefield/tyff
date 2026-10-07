@@ -36,7 +36,9 @@ def _prepare_openmm_system(
             "prepared_files": files,
         }
 
-    compute_config: BulkLiquid = BulkLiquid(**json.load(open(f"{job_dir}/compute_config.json")))  # type: ignore[typeddict-item]
+    with open(f"{job_dir}/compute_config.json") as f:
+        compute_config: BulkLiquid = BulkLiquid(**json.load(f))  # type: ignore[typeddict-item]
+
     packing_files: PackingFiles = packing_future["packed_files"]
 
     packed_topology: Topology = Topology.from_pdb(

@@ -67,7 +67,8 @@ def _get_ensemble_average_and_jacobian(
     # so grab them from scattered files we expect to be in this job directory.
 
     # TODO: Handle case of cas simulations
-    compute_config = BulkLiquid(**json.load(open(f"{job_dir}/compute_config.json")))  # type: ignore[typeddict-item]
+    with open(f"{job_dir}/compute_config.json") as f:
+        compute_config = BulkLiquid(**json.load(f))  # type: ignore[typeddict-item]
 
     temperature = compute_config["temperature"]  # kelvin, float
     pressure = compute_config.get("pressure")  # atmosphere, float | None
@@ -93,7 +94,8 @@ def _get_ensemble_average_and_jacobian(
 
     # before this job (before ANY job ... ) a "global" tensor force field representing the entire data set
     # needs to be created and serialized to somewhere root-like, accessible to all jobs
-    reference_force_field = load_tensor_force_field(json.loads(open(reference_force_field_path).read()))
+    with open(reference_force_field_path) as f:
+        reference_force_field = load_tensor_force_field(json.loads(f.read()))
 
     # must sync this up with tyff/compute/_pack.py if ever either change
     n_molecules = compute_config["n_molecules"]
