@@ -73,6 +73,8 @@ def _get_ensemble_average_and_jacobian(
     pressure = compute_config.get("pressure")  # atmosphere, float | None
 
     interchanges = []
+
+    # these are sorted (from a set) when we write them out
     for path_index, interchange_path in enumerate(sorted(glob.glob(f"{job_dir}/single_molecule_interchange_*.json"))):
         unique_molecule_index = int(pathlib.Path(interchange_path).stem.split("interchange_")[-1])
 
