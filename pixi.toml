@@ -20,9 +20,9 @@ pyyaml = "*"
 numpy = "*"
 setuptools_scm = "*"
 distributed = "*"
-openmm = "==8.4.*"
+openmm = "*"
 symengine = "*"
-rdkit = "==2023.*"
+rdkit = "*"
 matplotlib = "*"
 panel = "*"
 sqlmodel = "*"
@@ -30,32 +30,26 @@ dask = "*"
 dask-jobqueue = "*"
 dask-kubernetes = "*"
 rdkit-stubs = "*"
-parsl = "*"
+parsl = "==2026.*"
 rich = "*"
+nbconvert = "*"
+uncertainties = "*"
+tensorboard = "*"
+tensorboardx = "*"
 tyff = { path = ".", editable = true }
 
 [dependencies]
-openmm = "8.4.*" # need to help Pixi, since conda solve constraints PyPI solve
-openff-toolkit = "0.18.*"
-openff-interchange = "0.5.*"
-openff-nagl-base = "*"
-openff-nagl-models = "*"
+openff-toolkit = "*"
 openmmtools = "*"
 pydantic-units = "*"
-pytorch = "*"
 datasets = "*"
 bokeh = "3.9.*"
 # probably optional-ish below here
-jupyter = "*"
-nbconvert = "*"
-tensorboard = "*"
-tensorboardx = "*"
-uncertainties = "*"
 openff-packmol = "0.1.*"
 openff-evaluator-base = "*"
 # shims
 pyarrow = "20.*"
-rdkit = "2023.*"
+filelock = "<4"  # parsl stuck on 3.x
 
 [environments]
 py312amber = [ "py312", "ambertools", "test", "typing" ]
@@ -64,6 +58,7 @@ dev = [ "py312", "openeye", "test", "typing", "dev" ]
 hpc3 = ["py312", "openeye", "cu130", "packmol" ]
 
 [feature.dev.dependencies]
+# these PyPI builds are marked as pre-release only for some reason
 pymol-open-source = "*"
 
 [feature.dev.pypi-dependencies]
@@ -84,7 +79,7 @@ dependencies = { openeye-toolkits = "*" }
 packmol = ">=20"
 
 [feature.cu130.dependencies]
-cuda-version = "13.0"
+cuda-version = "==13.0"
 
 [feature.py312.dependencies]
 python = "3.12.*"
