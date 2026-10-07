@@ -10,7 +10,7 @@ run_tests = {
     env = {OPENMM_DEFAULT_PLATFORM="CPU"},
 }
 dev_tests = {
-    cmd = "python -m pytest -x --lf tyff/_tests",
+    cmd = "python -m pytest -x --lf tyff/_tests --dist no",
     env = {OPENMM_DEFAULT_PLATFORM="CPU"},
 }
 
