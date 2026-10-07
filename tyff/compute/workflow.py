@@ -5,7 +5,7 @@ from collections.abc import Sequence
 
 import numpy
 import parsl
-from parsl import File
+from parsl import File, python_app
 from rich import print
 
 from tyff.compute._files import (
@@ -27,6 +27,17 @@ from tyff.configs.targets.thermo import DataEntry
 logger = logging.getLogger(__name__)  # module-level logger, not root
 
 
+@python_app
+def _completed_future(value):
+    """Wrap an already-known value in a real AppFuture.
+
+    Used by the short-circuit path in _common_run so that every
+    "future" handed back from _common_run supports .result(), whether
+    or not the job actually got (re)submitted to Parsl.
+    """
+    return value
+
+
 class SimulationWorkflow:
     def __init__(self, base_dir, parsl_config):
         from tyff.compute._logging import _set_up_logger
@@ -38,6 +49,10 @@ class SimulationWorkflow:
         # at scale these should become databases or something more robust
         self._targets = dict()
         self._target_compute_mapping: dict[tuple[int, str, int, int], list[tuple[str, ...]]] = dict()
+
+        # futures submitted via submit_target/submit_target_batch that haven't
+        # been waited on yet; drained by wait()
+        self._pending: list[dict] = []
 
         # self.logger, maybe?
         logger = _set_up_logger(f"{base_dir}/workflow.log")
@@ -108,8 +123,13 @@ class SimulationWorkflow:
                 tuple([make_job_id(compute_config) for compute_config in this_targets_compute_configs])
             )
 
-            # run each compute job - can be >1 compute job per property
-            self.run(compute_configs=this_targets_compute_configs)
+            # submit each compute job without blocking - can be >1 compute job per property.
+            # NOTE: this used to call self.run(...), which calls .result() on every
+            # future before returning. That made submit_target fully synchronous, so
+            # back-to-back calls (e.g. looping over n_molecules) ran strictly serially
+            # instead of concurrently. Queue the futures instead and let callers drain
+            # them with wait() once everything they want submitted is submitted.
+            self._pending.extend(self._submit_compute_batch(compute_configs=this_targets_compute_configs))
 
     def submit_target_batch(
         self,
@@ -184,6 +204,22 @@ class SimulationWorkflow:
         """Submit a batch and block until all complete."""
         pending = self._submit_compute_batch(compute_configs)
 
+        return self._drain(pending)
+
+    def wait(self):
+        """Block until every future queued by submit_target/submit_target_batch completes.
+
+        Call this once after all desired submit_target(_batch) calls have been
+        made, so Parsl can actually run them concurrently in the meantime.
+        Returns results/errors per job and clears the pending queue.
+        """
+        results = self._drain(self._pending)
+        self._pending = []
+        return results
+
+    @staticmethod
+    def _drain(pending):
+
         results = []
         for item in pending:
             try:
@@ -242,6 +278,10 @@ class SimulationWorkflow:
             )
 
             return {"job_id": job_id, "future": {"files": files}}
+            # wrap in a real AppFuture (not a plain dict) so callers can
+            # uniformly call .result() regardless of which branch ran
+            return {"job_id": job_id, "future": _completed_future({"files": files})}
+
         else:
             logger.info(f"short-circuit check for job {job_id} failed, running full workflow")
 
@@ -272,4 +312,5 @@ class SimulationWorkflow:
         return self
 
     def __exit__(self, *args):
+        self.wait()
         self.shutdown()
