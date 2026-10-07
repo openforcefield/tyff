@@ -52,7 +52,7 @@ def basic_simulation() -> openmm.app.Simulation:
             ),
             additional_forces=[
                 openmm.MonteCarloBarostat(
-                    1.0 * openmm.unit.atmospheres,
+                    1.0 * openmm.unit.kilopascal,
                     298.15 * openmm.unit.kelvin,
                 )
             ],
@@ -87,7 +87,7 @@ class TestTensorReporter:
 
         expected_output_path = tmp_path / "output.msgpack"
 
-        pressure = 1.0 * openmm.unit.atmospheres
+        pressure = 1.0 * openmm.unit.kilopascals
 
         with expected_output_path.open("wb") as file:
             reporter = TensorReporter(file, 1, _BETA, pressure)
@@ -137,7 +137,7 @@ class TestTensorReporter:
                 output_file=str(tmp_path / "1.msgpack"),
                 report_interval=10,
                 beta=_BETA,
-                pressure=1.0 * openmm.unit.atmospheres,
+                pressure=101.325 * openmm.unit.kilopascals,
             )
 
             simulation.reporters.append(reporter)
@@ -152,7 +152,7 @@ class TestTensorReporter:
                     output_file=output_file,
                     report_interval=10,
                     beta=_BETA,
-                    pressure=1.0 * openmm.unit.atmospheres,
+                    pressure=101.325 * openmm.unit.kilopascals,
                 )
 
                 simulation.reporters.append(tensor_reporter)
@@ -167,7 +167,7 @@ class TestTensorReporter:
             output_file=str(tmp_path / "append.msgpack"),
             report_interval=10,
             beta=_BETA,
-            pressure=1.0 * openmm.unit.atmospheres,
+            pressure=101.325 * openmm.unit.kilopascals,
             append=True,
         )
 
@@ -183,7 +183,7 @@ class TestTensorReporter:
             output_file=str(tmp_path / "append.msgpack"),
             report_interval=10,
             beta=_BETA,
-            pressure=1.0 * openmm.unit.atmospheres,
+            pressure=101.325 * openmm.unit.kilopascals,
             append=append,
         )
 
@@ -202,7 +202,7 @@ class TestTensorReporter:
 def test_tensor_reporter(tmp_path):
     output = tmp_path / "frames.msgpack"
 
-    pressure = 1.0 * openmm.unit.atmospheres
+    pressure = 1.0 * openmm.unit.kilopascals
 
     with tensor_reporter(output, 2, _BETA, pressure) as reporter:
         assert isinstance(reporter, TensorReporter)

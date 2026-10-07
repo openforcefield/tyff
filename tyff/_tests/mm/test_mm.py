@@ -321,7 +321,7 @@ def test_run_simulation(mock_omm_topology, mock_omm_system):
         openmm.Platform.getPlatformByName("Reference"),
         tyff.mm.SimulationConfig(
             temperature=86.0 * openmm.unit.kelvin,
-            pressure=1.0 * openmm.unit.atmosphere,
+            pressure=101.325 * openmm.unit.kilopascal,
             n_steps=1,
         ),
     )
@@ -379,7 +379,7 @@ def test_simulate_invalid_pressure(mock_argon_tensors):
             [],
             tyff.mm.SimulationConfig(
                 temperature=1.0 * openmm.unit.kelvin,
-                pressure=1.0 * openmm.unit.bar,
+                pressure=100.0 * openmm.unit.kilopascal,
                 n_steps=2,
             ),
             [],

@@ -170,7 +170,7 @@ class TestBoxCoordinates:
     def test_create_box_coordinates(self, sample_binary_box_coordinates):
         """Test creating a BoxCoordinates instance."""
         assert sample_binary_box_coordinates.temperature == 298.15
-        assert sample_binary_box_coordinates.pressure == 1.0
+        assert sample_binary_box_coordinates.pressure == 101.325
         assert sample_binary_box_coordinates.force_field_id == "openff-2.1.0"
         assert sample_binary_box_coordinates.potential_energy == -1234.56
         assert len(sample_binary_box_coordinates.substance.molecule_species) == 2
@@ -198,7 +198,7 @@ class TestBoxCoordinates:
         box = BoxCoordinates(
             substance=sample_substance,
             temperature=300.0,
-            pressure=1.0,
+            pressure=101.325,
             force_field_id="test",
             potential_energy=0.0,
             coordinates=None,
@@ -312,7 +312,7 @@ class TestBoxCoordinates:
         box_no_coords = BoxCoordinates(
             substance=sample_binary_box_coordinates.substance,
             temperature=300.0,
-            pressure=1.0,
+            pressure=101.325,
             force_field_id="test",
             potential_energy=0.0,
             coordinates=None,
@@ -340,7 +340,7 @@ class TestBoxCoordinates:
         original_box = BoxCoordinates(
             substance=Substance(molecule_species=original_molecule_species),
             temperature=300.0,
-            pressure=1.0,
+            pressure=101.325,
             force_field_id="test",
             potential_energy=0.0,
             coordinates=original_coords,
@@ -362,7 +362,7 @@ class TestBoxCoordinates:
         new_box = BoxCoordinates(
             substance=Substance(molecule_species=new_molecule_species),
             temperature=310.0,
-            pressure=1.0,
+            pressure=101.325,
             force_field_id="test",
             potential_energy=-1000.0,
             coordinates=new_coords,
@@ -427,7 +427,7 @@ class TestBoxCoordinates:
         box = BoxCoordinates(
             substance=sample_substance,
             temperature=300.0,
-            pressure=1.0,
+            pressure=101.325,
             force_field_id="test",
             potential_energy=0.0,
             coordinates=None,
