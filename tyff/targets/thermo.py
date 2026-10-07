@@ -36,10 +36,8 @@ DATA_TYPES = typing.get_args(DataType)
 DATA_SCHEMA = pyarrow.schema(
     [
         ("type", pyarrow.string()),
-        ("smiles_a", pyarrow.string()),
-        ("x_a", pyarrow.float64()),
-        ("smiles_b", pyarrow.string()),
-        ("x_b", pyarrow.float64()),
+        ("smiles", pyarrow.list_(pyarrow.string())),
+        ("x", pyarrow.list_(pyarrow.float64())),
         ("temperature", pyarrow.float64()),
         ("pressure", pyarrow.float64()),
         ("value", pyarrow.float64()),
@@ -66,15 +64,10 @@ class DataEntry(typing.TypedDict):
     type: DataType
     """The type of data point."""
 
-    smiles_a: str
-    """The SMILES definition of the first component."""
-    x_a: float | None
-    """The mole fraction of the first component. This must be set to 1.0 if the data"""
-
-    smiles_b: str | None
-    """The SMILES definition of the second component if present."""
-    x_b: float | None
-    """The mole fraction of the second component if present."""
+    smiles: list[str]
+    """The SMILES definitions of each components."""
+    x: list[float]
+    """The mole fractions of each components. Values must sum to 1.0."""
 
     temperature: float
     """The temperature at which the data point was measured."""
@@ -243,11 +236,20 @@ def extract_smiles(dataset: datasets.Dataset) -> list[str]:
     Returns:
         The unique SMILES strings with full atom mapping.
     """
-    smiles_a = {smiles for smiles in dataset.unique("smiles_a") if smiles is not None}
-    smiles_b = {smiles for smiles in dataset.unique("smiles_b") if smiles is not None}
 
-    smiles_unique = sorted({*smiles_a, *smiles_b})
-    return smiles_unique
+    def _flatten_list_of_smiles_to_set(smiles_list: list[str]) -> set[str]:
+        unique_smiles: set[str] = set()
+
+        assert isinstance(smiles_list, list)
+
+        for value in smiles_list:
+            assert isinstance(value, str)
+
+            unique_smiles.add(value)
+
+        return unique_smiles
+
+    return sorted(_flatten_list_of_smiles_to_set(dataset.unique("smiles")))
 
 
 def _convert_entry_to_system(
@@ -264,12 +266,15 @@ def _convert_entry_to_system(
     Returns:
         The system and its associated key.
     """
-    smiles_a: str = entry["smiles_a"]
+    if len(entry["smiles"]) > 2 or len(entry["x"]) > 2:
+        raise NotImplementedError("Only pure and binary mixtures are currently supported.")
 
-    fraction_a = 0.0 if entry["x_a"] is None else entry["x_a"]
-    fraction_b = 0.0 if entry["x_b"] is None else entry["x_b"]
+    smiles_a: str = entry["smiles"][0]
 
-    assert numpy.isclose(fraction_a + fraction_b, 1.0)
+    fraction_a = entry["x"][0]
+    fraction_b = entry["x"][1] if len(entry["x"]) > 1 else 0.0
+
+    assert numpy.isclose(fraction_a + fraction_b, 1.0), "Mole fractions do not sum to 1.0"
 
     n_copies_a = int(max_mols * fraction_a)
     n_copies_b = int(max_mols * fraction_b)
@@ -280,7 +285,7 @@ def _convert_entry_to_system(
     n_copies = [n_copies_a]
 
     if n_copies_b > 0:
-        smiles_b: str = entry["smiles_b"]
+        smiles_b: str = entry["smiles"][1]
         smiles.append(smiles_b)
 
         system_topologies.append(topologies[smiles_b])
