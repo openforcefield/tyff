@@ -32,22 +32,19 @@ dask-kubernetes = "*"
 rdkit-stubs = "*"
 parsl = "==2026.*"
 rich = "*"
+nbconvert = "*"
+uncertainties = "*"
+tensorboard = "*"
+tensorboardx = "*"
 tyff = { path = ".", editable = true }
 
 [dependencies]
-openmm = "*"
 openff-toolkit = "*"
 openmmtools = "*"
 pydantic-units = "*"
-pytorch = "*"
 datasets = "*"
 bokeh = "3.9.*"
 # probably optional-ish below here
-jupyter = "*"
-nbconvert = "*"
-tensorboard = "*"
-tensorboardx = "*"
-uncertainties = "*"
 openff-packmol = "0.1.*"
 openff-evaluator-base = "*"
 # shims
@@ -61,6 +58,7 @@ dev = [ "py312", "openeye", "test", "typing", "dev" ]
 hpc3 = ["py312", "openeye", "cu130", "packmol" ]
 
 [feature.dev.dependencies]
+# these PyPI builds are marked as pre-release only for some reason
 pymol-open-source = "*"
 
 [feature.dev.pypi-dependencies]
