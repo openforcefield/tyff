@@ -50,7 +50,7 @@ interchanges = [
 
 for index, interchange in enumerate(interchanges):
     with open(f"sample_density/single_molecule_interchange_{index}.json", "w") as f:
-        f.write(interchange.model_dump_json())
+        f.write(interchange.model_dump_json(indent=4))
 
 reference_force_field, _ = tyff.converters.convert_interchange(interchanges)
 

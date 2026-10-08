@@ -1,1 +1,132 @@
-{"collections":{"Bonds":{"type":"Bonds","is_plugin":false,"expression":"k/2*(r-length)**2","key_map":{"{\"atom_indices\":[0,1],\"bond_order\":null}":"{\"id\":\"[#8:1]-[#1:2]\",\"mult\":null,\"associated_handler\":\"Bonds\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}","{\"atom_indices\":[0,2],\"bond_order\":null}":"{\"id\":\"[#8:1]-[#1:2]\",\"mult\":null,\"associated_handler\":\"Bonds\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}"},"potentials":{"{\"id\":\"[#8:1]-[#1:2]\",\"mult\":null,\"associated_handler\":\"Bonds\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}":"{\"parameters\":{\"k\":{\"val\":1141.303841414,\"unit\":\"kilocalorie_per_mole / angstrom ** 2\"},\"length\":{\"val\":0.9711625418245,\"unit\":\"angstrom\"}},\"map_key\":null}"},"fractional_bond_order_method":"AM1-Wiberg","fractional_bond_order_interpolation":"linear"},"Constraints":{"type":"Constraints","is_plugin":false,"expression":"","key_map":{"{\"atom_indices\":[0,1],\"bond_order\":null}":"{\"id\":\"[#1:1]-[#8X2H2+0:2]-[#1]\",\"mult\":null,\"associated_handler\":\"Constraints\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}","{\"atom_indices\":[0,2],\"bond_order\":null}":"{\"id\":\"[#1:1]-[#8X2H2+0:2]-[#1]\",\"mult\":null,\"associated_handler\":\"Constraints\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}","{\"atom_indices\":[1,2],\"bond_order\":null}":"{\"id\":\"[#1:1]-[#8X2H2+0]-[#1:2]\",\"mult\":null,\"associated_handler\":\"Constraints\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}"},"potentials":{"{\"id\":\"[#1:1]-[#8X2H2+0:2]-[#1]\",\"mult\":null,\"associated_handler\":\"Constraints\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}":"{\"parameters\":{\"distance\":{\"val\":0.9572,\"unit\":\"angstrom\"}},\"map_key\":null}","{\"id\":\"[#1:1]-[#8X2H2+0]-[#1:2]\",\"mult\":null,\"associated_handler\":\"Constraints\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}":"{\"parameters\":{\"distance\":{\"val\":1.5139006545247014,\"unit\":\"angstrom\"}},\"map_key\":null}"}},"Angles":{"type":"Angles","is_plugin":false,"expression":"k/2*(theta-angle)**2","key_map":{"{\"atom_indices\":[1,0,2]}":"{\"id\":\"[#1:1]-[#8:2]-[*:3]\",\"mult\":null,\"associated_handler\":\"Angles\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}"},"potentials":{"{\"id\":\"[#1:1]-[#8:2]-[*:3]\",\"mult\":null,\"associated_handler\":\"Angles\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}":"{\"parameters\":{\"k\":{\"val\":208.3323698809,\"unit\":\"kilocalorie_per_mole / radian ** 2\"},\"angle\":{\"val\":108.6776125931,\"unit\":\"degree\"}},\"map_key\":null}"}},"ProperTorsions":{"type":"ProperTorsions","is_plugin":false,"expression":"k*(1+cos(periodicity*theta-phase))","key_map":{},"potentials":{},"fractional_bond_order_method":"AM1-Wiberg","fractional_bond_order_interpolation":"linear"},"ImproperTorsions":{"type":"ImproperTorsions","is_plugin":false,"expression":"k*(1+cos(periodicity*theta-phase))","key_map":{},"potentials":{}},"vdW":{"type":"vdW","is_plugin":false,"expression":"4*epsilon*((sigma/r)**12-(sigma/r)**6)","key_map":{"{\"atom_indices\":[0]}":"{\"id\":\"[#1]-[#8X2H2+0:1]-[#1]\",\"mult\":null,\"associated_handler\":\"vdW\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}","{\"atom_indices\":[1]}":"{\"id\":\"[#1:1]-[#8X2H2+0]-[#1]\",\"mult\":null,\"associated_handler\":\"vdW\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}","{\"atom_indices\":[2]}":"{\"id\":\"[#1:1]-[#8X2H2+0]-[#1]\",\"mult\":null,\"associated_handler\":\"vdW\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}"},"potentials":{"{\"id\":\"[#1]-[#8X2H2+0:1]-[#1]\",\"mult\":null,\"associated_handler\":\"vdW\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}":"{\"parameters\":{\"sigma\":{\"val\":3.1507,\"unit\":\"angstrom\"},\"epsilon\":{\"val\":0.1521,\"unit\":\"kilocalorie / mole\"}},\"map_key\":null}","{\"id\":\"[#1:1]-[#8X2H2+0]-[#1]\",\"mult\":null,\"associated_handler\":\"vdW\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}":"{\"parameters\":{\"sigma\":{\"val\":1,\"unit\":\"angstrom\"},\"epsilon\":{\"val\":0.0,\"unit\":\"kilocalorie / mole\"}},\"map_key\":null}"},"cutoff":{"val":9.0,"unit":"angstrom"},"scale_12":0.0,"scale_13":0.0,"scale_14":0.5,"scale_15":1.0,"mixing_rule":"lorentz-berthelot","switch_width":{"val":1.0,"unit":"angstrom"},"periodic_method":"cutoff","nonperiodic_method":"no-cutoff"},"Electrostatics":{"type":"Electrostatics","is_plugin":false,"expression":"coul","key_map":{"{\"this_atom_index\":0}":"{\"id\":\"[#1]-[#8X2H2+0:1]-[#1]\",\"mult\":0,\"associated_handler\":\"LibraryCharges\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}","{\"this_atom_index\":1}":"{\"id\":\"[#1:1]-[#8X2H2+0]-[#1]\",\"mult\":0,\"associated_handler\":\"LibraryCharges\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}","{\"this_atom_index\":2}":"{\"id\":\"[#1:1]-[#8X2H2+0]-[#1]\",\"mult\":0,\"associated_handler\":\"LibraryCharges\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}"},"potentials":{"{\"id\":\"[#1]-[#8X2H2+0:1]-[#1]\",\"mult\":0,\"associated_handler\":\"LibraryCharges\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}":"{\"parameters\":{\"charge\":{\"val\":-0.834,\"unit\":\"elementary_charge\"}},\"map_key\":null}","{\"id\":\"[#1:1]-[#8X2H2+0]-[#1]\",\"mult\":0,\"associated_handler\":\"LibraryCharges\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}":"{\"parameters\":{\"charge\":{\"val\":0.417,\"unit\":\"elementary_charge\"}},\"map_key\":null}"},"cutoff":{"val":9.0,"unit":"angstrom"},"scale_12":0.0,"scale_13":0.0,"scale_14":0.8333333333,"scale_15":1.0,"periodic_potential":"Ewald3D-ConductingBoundary","nonperiodic_potential":"Coulomb","exception_potential":"Coulomb","charges":{"atom_indices=(0,)":{"val":-0.834,"unit":"elementary_charge"},"atom_indices=(1,)":{"val":0.417,"unit":"elementary_charge"},"atom_indices=(2,)":{"val":0.417,"unit":"elementary_charge"}}}},"topology":"{\"aromaticity_model\": \"OEAroModel_MDL\", \"constrained_atom_pairs\": {}, \"box_vectors\": null, \"box_vectors_unit\": null, \"molecules\": [{\"name\": \"\", \"atoms\": [{\"atomic_number\": 8, \"formal_charge\": 0, \"is_aromatic\": false, \"stereochemistry\": null, \"name\": \"\", \"metadata\": {}}, {\"atomic_number\": 1, \"formal_charge\": 0, \"is_aromatic\": false, \"stereochemistry\": null, \"name\": \"\", \"metadata\": {}}, {\"atomic_number\": 1, \"formal_charge\": 0, \"is_aromatic\": false, \"stereochemistry\": null, \"name\": \"\", \"metadata\": {}}], \"bonds\": [{\"atom1\": 0, \"atom2\": 1, \"bond_order\": 1, \"is_aromatic\": false, \"stereochemistry\": null, \"fractional_bond_order\": null}, {\"atom1\": 0, \"atom2\": 2, \"bond_order\": 1, \"is_aromatic\": false, \"stereochemistry\": null, \"fractional_bond_order\": null}], \"properties\": {\"atom_map\": {\"0\": 1, \"1\": 2, \"2\": 3}}, \"conformers\": null, \"partial_charges\": null, \"partial_charge_unit\": null, \"hierarchy_schemes\": {}}]}","mdconfig":null,"box":null,"positions":null,"velocities":null}
+{
+    "collections": {
+        "Bonds": {
+            "type": "Bonds",
+            "is_plugin": false,
+            "expression": "k/2*(r-length)**2",
+            "key_map": {
+                "{\"atom_indices\":[0,1],\"bond_order\":null}": "{\"id\":\"[#8:1]-[#1:2]\",\"mult\":null,\"associated_handler\":\"Bonds\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[0,2],\"bond_order\":null}": "{\"id\":\"[#8:1]-[#1:2]\",\"mult\":null,\"associated_handler\":\"Bonds\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}"
+            },
+            "potentials": {
+                "{\"id\":\"[#8:1]-[#1:2]\",\"mult\":null,\"associated_handler\":\"Bonds\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"k\":{\"val\":1141.303841414,\"unit\":\"kilocalorie_per_mole / angstrom ** 2\"},\"length\":{\"val\":0.9711625418245,\"unit\":\"angstrom\"}},\"map_key\":null}"
+            },
+            "fractional_bond_order_method": "AM1-Wiberg",
+            "fractional_bond_order_interpolation": "linear"
+        },
+        "Constraints": {
+            "type": "Constraints",
+            "is_plugin": false,
+            "expression": "",
+            "key_map": {
+                "{\"atom_indices\":[0,1],\"bond_order\":null}": "{\"id\":\"[#1:1]-[#8X2H2+0:2]-[#1]\",\"mult\":null,\"associated_handler\":\"Constraints\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[0,2],\"bond_order\":null}": "{\"id\":\"[#1:1]-[#8X2H2+0:2]-[#1]\",\"mult\":null,\"associated_handler\":\"Constraints\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[1,2],\"bond_order\":null}": "{\"id\":\"[#1:1]-[#8X2H2+0]-[#1:2]\",\"mult\":null,\"associated_handler\":\"Constraints\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}"
+            },
+            "potentials": {
+                "{\"id\":\"[#1:1]-[#8X2H2+0:2]-[#1]\",\"mult\":null,\"associated_handler\":\"Constraints\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"distance\":{\"val\":0.9572,\"unit\":\"angstrom\"}},\"map_key\":null}",
+                "{\"id\":\"[#1:1]-[#8X2H2+0]-[#1:2]\",\"mult\":null,\"associated_handler\":\"Constraints\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"distance\":{\"val\":1.5139006545247014,\"unit\":\"angstrom\"}},\"map_key\":null}"
+            }
+        },
+        "Angles": {
+            "type": "Angles",
+            "is_plugin": false,
+            "expression": "k/2*(theta-angle)**2",
+            "key_map": {
+                "{\"atom_indices\":[1,0,2]}": "{\"id\":\"[#1:1]-[#8:2]-[*:3]\",\"mult\":null,\"associated_handler\":\"Angles\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}"
+            },
+            "potentials": {
+                "{\"id\":\"[#1:1]-[#8:2]-[*:3]\",\"mult\":null,\"associated_handler\":\"Angles\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"k\":{\"val\":208.3323698809,\"unit\":\"kilocalorie_per_mole / radian ** 2\"},\"angle\":{\"val\":108.6776125931,\"unit\":\"degree\"}},\"map_key\":null}"
+            }
+        },
+        "ProperTorsions": {
+            "type": "ProperTorsions",
+            "is_plugin": false,
+            "expression": "k*(1+cos(periodicity*theta-phase))",
+            "key_map": {},
+            "potentials": {},
+            "fractional_bond_order_method": "AM1-Wiberg",
+            "fractional_bond_order_interpolation": "linear"
+        },
+        "ImproperTorsions": {
+            "type": "ImproperTorsions",
+            "is_plugin": false,
+            "expression": "k*(1+cos(periodicity*theta-phase))",
+            "key_map": {},
+            "potentials": {}
+        },
+        "vdW": {
+            "type": "vdW",
+            "is_plugin": false,
+            "expression": "4*epsilon*((sigma/r)**12-(sigma/r)**6)",
+            "key_map": {
+                "{\"atom_indices\":[0]}": "{\"id\":\"[#1]-[#8X2H2+0:1]-[#1]\",\"mult\":null,\"associated_handler\":\"vdW\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[1]}": "{\"id\":\"[#1:1]-[#8X2H2+0]-[#1]\",\"mult\":null,\"associated_handler\":\"vdW\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[2]}": "{\"id\":\"[#1:1]-[#8X2H2+0]-[#1]\",\"mult\":null,\"associated_handler\":\"vdW\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}"
+            },
+            "potentials": {
+                "{\"id\":\"[#1]-[#8X2H2+0:1]-[#1]\",\"mult\":null,\"associated_handler\":\"vdW\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"sigma\":{\"val\":3.1507,\"unit\":\"angstrom\"},\"epsilon\":{\"val\":0.1521,\"unit\":\"kilocalorie / mole\"}},\"map_key\":null}",
+                "{\"id\":\"[#1:1]-[#8X2H2+0]-[#1]\",\"mult\":null,\"associated_handler\":\"vdW\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"sigma\":{\"val\":1,\"unit\":\"angstrom\"},\"epsilon\":{\"val\":0.0,\"unit\":\"kilocalorie / mole\"}},\"map_key\":null}"
+            },
+            "cutoff": {
+                "val": 9.0,
+                "unit": "angstrom"
+            },
+            "scale_12": 0.0,
+            "scale_13": 0.0,
+            "scale_14": 0.5,
+            "scale_15": 1.0,
+            "mixing_rule": "lorentz-berthelot",
+            "switch_width": {
+                "val": 1.0,
+                "unit": "angstrom"
+            },
+            "periodic_method": "cutoff",
+            "nonperiodic_method": "no-cutoff"
+        },
+        "Electrostatics": {
+            "type": "Electrostatics",
+            "is_plugin": false,
+            "expression": "coul",
+            "key_map": {
+                "{\"this_atom_index\":0}": "{\"id\":\"[#1]-[#8X2H2+0:1]-[#1]\",\"mult\":0,\"associated_handler\":\"LibraryCharges\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"this_atom_index\":1}": "{\"id\":\"[#1:1]-[#8X2H2+0]-[#1]\",\"mult\":0,\"associated_handler\":\"LibraryCharges\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"this_atom_index\":2}": "{\"id\":\"[#1:1]-[#8X2H2+0]-[#1]\",\"mult\":0,\"associated_handler\":\"LibraryCharges\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}"
+            },
+            "potentials": {
+                "{\"id\":\"[#1]-[#8X2H2+0:1]-[#1]\",\"mult\":0,\"associated_handler\":\"LibraryCharges\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"charge\":{\"val\":-0.834,\"unit\":\"elementary_charge\"}},\"map_key\":null}",
+                "{\"id\":\"[#1:1]-[#8X2H2+0]-[#1]\",\"mult\":0,\"associated_handler\":\"LibraryCharges\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"charge\":{\"val\":0.417,\"unit\":\"elementary_charge\"}},\"map_key\":null}"
+            },
+            "cutoff": {
+                "val": 9.0,
+                "unit": "angstrom"
+            },
+            "scale_12": 0.0,
+            "scale_13": 0.0,
+            "scale_14": 0.8333333333,
+            "scale_15": 1.0,
+            "periodic_potential": "Ewald3D-ConductingBoundary",
+            "nonperiodic_potential": "Coulomb",
+            "exception_potential": "Coulomb",
+            "charges": {
+                "atom_indices=(0,)": {
+                    "val": -0.834,
+                    "unit": "elementary_charge"
+                },
+                "atom_indices=(1,)": {
+                    "val": 0.417,
+                    "unit": "elementary_charge"
+                },
+                "atom_indices=(2,)": {
+                    "val": 0.417,
+                    "unit": "elementary_charge"
+                }
+            }
+        }
+    },
+    "topology": "{\"aromaticity_model\": \"OEAroModel_MDL\", \"constrained_atom_pairs\": {}, \"box_vectors\": null, \"box_vectors_unit\": null, \"molecules\": [{\"name\": \"\", \"atoms\": [{\"atomic_number\": 8, \"formal_charge\": 0, \"is_aromatic\": false, \"stereochemistry\": null, \"name\": \"\", \"metadata\": {}}, {\"atomic_number\": 1, \"formal_charge\": 0, \"is_aromatic\": false, \"stereochemistry\": null, \"name\": \"\", \"metadata\": {}}, {\"atomic_number\": 1, \"formal_charge\": 0, \"is_aromatic\": false, \"stereochemistry\": null, \"name\": \"\", \"metadata\": {}}], \"bonds\": [{\"atom1\": 0, \"atom2\": 1, \"bond_order\": 1, \"is_aromatic\": false, \"stereochemistry\": null, \"fractional_bond_order\": null}, {\"atom1\": 0, \"atom2\": 2, \"bond_order\": 1, \"is_aromatic\": false, \"stereochemistry\": null, \"fractional_bond_order\": null}], \"properties\": {\"atom_map\": {\"0\": 1, \"1\": 2, \"2\": 3}}, \"conformers\": null, \"partial_charges\": null, \"partial_charge_unit\": null, \"hierarchy_schemes\": {}}]}",
+    "mdconfig": null,
+    "box": null,
+    "positions": null,
+    "velocities": null
+}
