@@ -1,0 +1,228 @@
+{
+    "collections": {
+        "Bonds": {
+            "type": "Bonds",
+            "is_plugin": false,
+            "expression": "k/2*(r-length)**2",
+            "key_map": {
+                "{\"atom_indices\":[0,1],\"bond_order\":null}": "{\"id\":\"[#6X4:1]-[#6X4:2]\",\"mult\":null,\"associated_handler\":\"Bonds\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[0,6],\"bond_order\":null}": "{\"id\":\"[#6X4:1]-[#1:2]\",\"mult\":null,\"associated_handler\":\"Bonds\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[0,7],\"bond_order\":null}": "{\"id\":\"[#6X4:1]-[#1:2]\",\"mult\":null,\"associated_handler\":\"Bonds\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[0,8],\"bond_order\":null}": "{\"id\":\"[#6X4:1]-[#1:2]\",\"mult\":null,\"associated_handler\":\"Bonds\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[1,2],\"bond_order\":null}": "{\"id\":\"[#6:1]-[#8:2]\",\"mult\":null,\"associated_handler\":\"Bonds\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[1,4],\"bond_order\":null}": "{\"id\":\"[#6X4:1]-[#1:2]\",\"mult\":null,\"associated_handler\":\"Bonds\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[1,5],\"bond_order\":null}": "{\"id\":\"[#6X4:1]-[#1:2]\",\"mult\":null,\"associated_handler\":\"Bonds\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[2,3],\"bond_order\":null}": "{\"id\":\"[#8:1]-[#1:2]\",\"mult\":null,\"associated_handler\":\"Bonds\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}"
+            },
+            "potentials": {
+                "{\"id\":\"[#6X4:1]-[#6X4:2]\",\"mult\":null,\"associated_handler\":\"Bonds\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"k\":{\"val\":457.9258198725,\"unit\":\"kilocalorie_per_mole / angstrom ** 2\"},\"length\":{\"val\":1.525970013793,\"unit\":\"angstrom\"}},\"map_key\":null}",
+                "{\"id\":\"[#6X4:1]-[#1:2]\",\"mult\":null,\"associated_handler\":\"Bonds\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"k\":{\"val\":680.7664447835,\"unit\":\"kilocalorie_per_mole / angstrom ** 2\"},\"length\":{\"val\":1.092445809108,\"unit\":\"angstrom\"}},\"map_key\":null}",
+                "{\"id\":\"[#6:1]-[#8:2]\",\"mult\":null,\"associated_handler\":\"Bonds\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"k\":{\"val\":394.308606076,\"unit\":\"kilocalorie_per_mole / angstrom ** 2\"},\"length\":{\"val\":1.422597694743,\"unit\":\"angstrom\"}},\"map_key\":null}",
+                "{\"id\":\"[#8:1]-[#1:2]\",\"mult\":null,\"associated_handler\":\"Bonds\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"k\":{\"val\":1141.303841414,\"unit\":\"kilocalorie_per_mole / angstrom ** 2\"},\"length\":{\"val\":0.9711625418245,\"unit\":\"angstrom\"}},\"map_key\":null}"
+            },
+            "fractional_bond_order_method": "AM1-Wiberg",
+            "fractional_bond_order_interpolation": "linear"
+        },
+        "Constraints": {
+            "type": "Constraints",
+            "is_plugin": false,
+            "expression": "",
+            "key_map": {
+                "{\"atom_indices\":[0,6],\"bond_order\":null}": "{\"id\":\"[#6X4:1]-[#1:2]\",\"mult\":null,\"associated_handler\":\"Bonds\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[0,7],\"bond_order\":null}": "{\"id\":\"[#6X4:1]-[#1:2]\",\"mult\":null,\"associated_handler\":\"Bonds\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[0,8],\"bond_order\":null}": "{\"id\":\"[#6X4:1]-[#1:2]\",\"mult\":null,\"associated_handler\":\"Bonds\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[1,4],\"bond_order\":null}": "{\"id\":\"[#6X4:1]-[#1:2]\",\"mult\":null,\"associated_handler\":\"Bonds\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[1,5],\"bond_order\":null}": "{\"id\":\"[#6X4:1]-[#1:2]\",\"mult\":null,\"associated_handler\":\"Bonds\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[2,3],\"bond_order\":null}": "{\"id\":\"[#8:1]-[#1:2]\",\"mult\":null,\"associated_handler\":\"Bonds\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}"
+            },
+            "potentials": {
+                "{\"id\":\"[#6X4:1]-[#1:2]\",\"mult\":null,\"associated_handler\":\"Bonds\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"distance\":{\"val\":1.092445809108,\"unit\":\"angstrom\"}},\"map_key\":null}",
+                "{\"id\":\"[#8:1]-[#1:2]\",\"mult\":null,\"associated_handler\":\"Bonds\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"distance\":{\"val\":0.9711625418245,\"unit\":\"angstrom\"}},\"map_key\":null}"
+            }
+        },
+        "Angles": {
+            "type": "Angles",
+            "is_plugin": false,
+            "expression": "k/2*(theta-angle)**2",
+            "key_map": {
+                "{\"atom_indices\":[0,1,2]}": "{\"id\":\"[*:1]~[#6X4:2]-[*:3]\",\"mult\":null,\"associated_handler\":\"Angles\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[0,1,4]}": "{\"id\":\"[*:1]~[#6X4:2]-[*:3]\",\"mult\":null,\"associated_handler\":\"Angles\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[0,1,5]}": "{\"id\":\"[*:1]~[#6X4:2]-[*:3]\",\"mult\":null,\"associated_handler\":\"Angles\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[1,0,6]}": "{\"id\":\"[*:1]~[#6X4:2]-[*:3]\",\"mult\":null,\"associated_handler\":\"Angles\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[1,0,7]}": "{\"id\":\"[*:1]~[#6X4:2]-[*:3]\",\"mult\":null,\"associated_handler\":\"Angles\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[1,0,8]}": "{\"id\":\"[*:1]~[#6X4:2]-[*:3]\",\"mult\":null,\"associated_handler\":\"Angles\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[1,2,3]}": "{\"id\":\"[#1:1]-[#8:2]-[*:3]\",\"mult\":null,\"associated_handler\":\"Angles\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[2,1,4]}": "{\"id\":\"[*:1]~[#6X4:2]-[*:3]\",\"mult\":null,\"associated_handler\":\"Angles\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[2,1,5]}": "{\"id\":\"[*:1]~[#6X4:2]-[*:3]\",\"mult\":null,\"associated_handler\":\"Angles\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[4,1,5]}": "{\"id\":\"[#1:1]-[#6X4:2]-[#1:3]\",\"mult\":null,\"associated_handler\":\"Angles\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[6,0,7]}": "{\"id\":\"[#1:1]-[#6X4:2]-[#1:3]\",\"mult\":null,\"associated_handler\":\"Angles\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[6,0,8]}": "{\"id\":\"[#1:1]-[#6X4:2]-[#1:3]\",\"mult\":null,\"associated_handler\":\"Angles\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[7,0,8]}": "{\"id\":\"[#1:1]-[#6X4:2]-[#1:3]\",\"mult\":null,\"associated_handler\":\"Angles\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}"
+            },
+            "potentials": {
+                "{\"id\":\"[*:1]~[#6X4:2]-[*:3]\",\"mult\":null,\"associated_handler\":\"Angles\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"k\":{\"val\":99.69215181429,\"unit\":\"kilocalorie_per_mole / radian ** 2\"},\"angle\":{\"val\":109.6505556522,\"unit\":\"degree\"}},\"map_key\":null}",
+                "{\"id\":\"[#1:1]-[#8:2]-[*:3]\",\"mult\":null,\"associated_handler\":\"Angles\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"k\":{\"val\":208.3323698809,\"unit\":\"kilocalorie_per_mole / radian ** 2\"},\"angle\":{\"val\":108.6776125931,\"unit\":\"degree\"}},\"map_key\":null}",
+                "{\"id\":\"[#1:1]-[#6X4:2]-[#1:3]\",\"mult\":null,\"associated_handler\":\"Angles\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"k\":{\"val\":39.43190954937,\"unit\":\"kilocalorie_per_mole / radian ** 2\"},\"angle\":{\"val\":108.0050010884,\"unit\":\"degree\"}},\"map_key\":null}"
+            }
+        },
+        "ProperTorsions": {
+            "type": "ProperTorsions",
+            "is_plugin": false,
+            "expression": "k*(1+cos(periodicity*theta-phase))",
+            "key_map": {
+                "{\"atom_indices\":[0,1,2,3],\"mult\":0,\"phase\":null,\"bond_order\":null}": "{\"id\":\"[#6X4:1]-[#6X4:2]-[#8X2H1:3]-[#1:4]\",\"mult\":0,\"associated_handler\":\"ProperTorsions\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[0,1,2,3],\"mult\":1,\"phase\":null,\"bond_order\":null}": "{\"id\":\"[#6X4:1]-[#6X4:2]-[#8X2H1:3]-[#1:4]\",\"mult\":1,\"associated_handler\":\"ProperTorsions\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[2,1,0,6],\"mult\":0,\"phase\":null,\"bond_order\":null}": "{\"id\":\"[#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]\",\"mult\":0,\"associated_handler\":\"ProperTorsions\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[2,1,0,6],\"mult\":1,\"phase\":null,\"bond_order\":null}": "{\"id\":\"[#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]\",\"mult\":1,\"associated_handler\":\"ProperTorsions\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[2,1,0,7],\"mult\":0,\"phase\":null,\"bond_order\":null}": "{\"id\":\"[#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]\",\"mult\":0,\"associated_handler\":\"ProperTorsions\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[2,1,0,7],\"mult\":1,\"phase\":null,\"bond_order\":null}": "{\"id\":\"[#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]\",\"mult\":1,\"associated_handler\":\"ProperTorsions\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[2,1,0,8],\"mult\":0,\"phase\":null,\"bond_order\":null}": "{\"id\":\"[#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]\",\"mult\":0,\"associated_handler\":\"ProperTorsions\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[2,1,0,8],\"mult\":1,\"phase\":null,\"bond_order\":null}": "{\"id\":\"[#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]\",\"mult\":1,\"associated_handler\":\"ProperTorsions\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[3,2,1,4],\"mult\":0,\"phase\":null,\"bond_order\":null}": "{\"id\":\"[*:1]-[#6X4:2]-[#8X2:3]-[#1:4]\",\"mult\":0,\"associated_handler\":\"ProperTorsions\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[3,2,1,5],\"mult\":0,\"phase\":null,\"bond_order\":null}": "{\"id\":\"[*:1]-[#6X4:2]-[#8X2:3]-[#1:4]\",\"mult\":0,\"associated_handler\":\"ProperTorsions\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[4,1,0,6],\"mult\":0,\"phase\":null,\"bond_order\":null}": "{\"id\":\"[#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]\",\"mult\":0,\"associated_handler\":\"ProperTorsions\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[4,1,0,7],\"mult\":0,\"phase\":null,\"bond_order\":null}": "{\"id\":\"[#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]\",\"mult\":0,\"associated_handler\":\"ProperTorsions\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[4,1,0,8],\"mult\":0,\"phase\":null,\"bond_order\":null}": "{\"id\":\"[#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]\",\"mult\":0,\"associated_handler\":\"ProperTorsions\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[5,1,0,6],\"mult\":0,\"phase\":null,\"bond_order\":null}": "{\"id\":\"[#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]\",\"mult\":0,\"associated_handler\":\"ProperTorsions\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[5,1,0,7],\"mult\":0,\"phase\":null,\"bond_order\":null}": "{\"id\":\"[#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]\",\"mult\":0,\"associated_handler\":\"ProperTorsions\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[5,1,0,8],\"mult\":0,\"phase\":null,\"bond_order\":null}": "{\"id\":\"[#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]\",\"mult\":0,\"associated_handler\":\"ProperTorsions\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}"
+            },
+            "potentials": {
+                "{\"id\":\"[#6X4:1]-[#6X4:2]-[#8X2H1:3]-[#1:4]\",\"mult\":0,\"associated_handler\":\"ProperTorsions\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"k\":{\"val\":0.4017369753905,\"unit\":\"kilocalorie / mole\"},\"periodicity\":{\"val\":3,\"unit\":\"dimensionless\"},\"phase\":{\"val\":0.0,\"unit\":\"degree\"},\"idivf\":{\"val\":1.0,\"unit\":\"dimensionless\"}},\"map_key\":null}",
+                "{\"id\":\"[#6X4:1]-[#6X4:2]-[#8X2H1:3]-[#1:4]\",\"mult\":1,\"associated_handler\":\"ProperTorsions\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"k\":{\"val\":0.2405111530649,\"unit\":\"kilocalorie / mole\"},\"periodicity\":{\"val\":1,\"unit\":\"dimensionless\"},\"phase\":{\"val\":0.0,\"unit\":\"degree\"},\"idivf\":{\"val\":1.0,\"unit\":\"dimensionless\"}},\"map_key\":null}",
+                "{\"id\":\"[#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]\",\"mult\":0,\"associated_handler\":\"ProperTorsions\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"k\":{\"val\":0.1007185121278,\"unit\":\"kilocalorie / mole\"},\"periodicity\":{\"val\":3,\"unit\":\"dimensionless\"},\"phase\":{\"val\":0.0,\"unit\":\"degree\"},\"idivf\":{\"val\":1.0,\"unit\":\"dimensionless\"}},\"map_key\":null}",
+                "{\"id\":\"[#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]\",\"mult\":1,\"associated_handler\":\"ProperTorsions\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"k\":{\"val\":0.4345168281108,\"unit\":\"kilocalorie / mole\"},\"periodicity\":{\"val\":1,\"unit\":\"dimensionless\"},\"phase\":{\"val\":0.0,\"unit\":\"degree\"},\"idivf\":{\"val\":1.0,\"unit\":\"dimensionless\"}},\"map_key\":null}",
+                "{\"id\":\"[*:1]-[#6X4:2]-[#8X2:3]-[#1:4]\",\"mult\":0,\"associated_handler\":\"ProperTorsions\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"k\":{\"val\":1.270955113618,\"unit\":\"kilocalorie / mole\"},\"periodicity\":{\"val\":3,\"unit\":\"dimensionless\"},\"phase\":{\"val\":0.0,\"unit\":\"degree\"},\"idivf\":{\"val\":3.0,\"unit\":\"dimensionless\"}},\"map_key\":null}",
+                "{\"id\":\"[#1:1]-[#6X4:2]-[#6X4:3]-[#1:4]\",\"mult\":0,\"associated_handler\":\"ProperTorsions\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"k\":{\"val\":0.2392094731239,\"unit\":\"kilocalorie / mole\"},\"periodicity\":{\"val\":3,\"unit\":\"dimensionless\"},\"phase\":{\"val\":0.0,\"unit\":\"degree\"},\"idivf\":{\"val\":1.0,\"unit\":\"dimensionless\"}},\"map_key\":null}"
+            },
+            "fractional_bond_order_method": "AM1-Wiberg",
+            "fractional_bond_order_interpolation": "linear"
+        },
+        "ImproperTorsions": {
+            "type": "ImproperTorsions",
+            "is_plugin": false,
+            "expression": "k*(1+cos(periodicity*theta-phase))",
+            "key_map": {},
+            "potentials": {}
+        },
+        "vdW": {
+            "type": "vdW",
+            "is_plugin": false,
+            "expression": "4*epsilon*((sigma/r)**12-(sigma/r)**6)",
+            "key_map": {
+                "{\"atom_indices\":[0]}": "{\"id\":\"[#6X4:1]\",\"mult\":null,\"associated_handler\":\"vdW\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[1]}": "{\"id\":\"[#6X4:1]\",\"mult\":null,\"associated_handler\":\"vdW\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[2]}": "{\"id\":\"[#8X2H1+0:1]\",\"mult\":null,\"associated_handler\":\"vdW\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[3]}": "{\"id\":\"[#1:1]-[#8]\",\"mult\":null,\"associated_handler\":\"vdW\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[4]}": "{\"id\":\"[#1:1]-[#6X4]-[#7,#8,#9,#16,#17,#35]\",\"mult\":null,\"associated_handler\":\"vdW\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[5]}": "{\"id\":\"[#1:1]-[#6X4]-[#7,#8,#9,#16,#17,#35]\",\"mult\":null,\"associated_handler\":\"vdW\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[6]}": "{\"id\":\"[#1:1]-[#6X4]\",\"mult\":null,\"associated_handler\":\"vdW\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[7]}": "{\"id\":\"[#1:1]-[#6X4]\",\"mult\":null,\"associated_handler\":\"vdW\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"atom_indices\":[8]}": "{\"id\":\"[#1:1]-[#6X4]\",\"mult\":null,\"associated_handler\":\"vdW\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}"
+            },
+            "potentials": {
+                "{\"id\":\"[#6X4:1]\",\"mult\":null,\"associated_handler\":\"vdW\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"sigma\":{\"val\":3.387971073428982,\"unit\":\"angstrom\"},\"epsilon\":{\"val\":0.1205698919337,\"unit\":\"kilocalorie / mole\"}},\"map_key\":null}",
+                "{\"id\":\"[#8X2H1+0:1]\",\"mult\":null,\"associated_handler\":\"vdW\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"sigma\":{\"val\":3.0237212943083334,\"unit\":\"angstrom\"},\"epsilon\":{\"val\":0.1353608645661,\"unit\":\"kilocalorie / mole\"}},\"map_key\":null}",
+                "{\"id\":\"[#1:1]-[#8]\",\"mult\":null,\"associated_handler\":\"vdW\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"sigma\":{\"val\":0.5330964133900715,\"unit\":\"angstrom\"},\"epsilon\":{\"val\":0.00001232058709465,\"unit\":\"kilocalorie / mole\"}},\"map_key\":null}",
+                "{\"id\":\"[#1:1]-[#6X4]-[#7,#8,#9,#16,#17,#35]\",\"mult\":null,\"associated_handler\":\"vdW\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"sigma\":{\"val\":2.5586037672254887,\"unit\":\"angstrom\"},\"epsilon\":{\"val\":0.01891997418601,\"unit\":\"kilocalorie / mole\"}},\"map_key\":null}",
+                "{\"id\":\"[#1:1]-[#6X4]\",\"mult\":null,\"associated_handler\":\"vdW\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"sigma\":{\"val\":2.6639341018377585,\"unit\":\"angstrom\"},\"epsilon\":{\"val\":0.01336628116185,\"unit\":\"kilocalorie / mole\"}},\"map_key\":null}"
+            },
+            "cutoff": {
+                "val": 9.0,
+                "unit": "angstrom"
+            },
+            "scale_12": 0.0,
+            "scale_13": 0.0,
+            "scale_14": 0.5,
+            "scale_15": 1.0,
+            "mixing_rule": "lorentz-berthelot",
+            "switch_width": {
+                "val": 1.0,
+                "unit": "angstrom"
+            },
+            "periodic_method": "cutoff",
+            "nonperiodic_method": "no-cutoff"
+        },
+        "Electrostatics": {
+            "type": "Electrostatics",
+            "is_plugin": false,
+            "expression": "coul",
+            "key_map": {
+                "{\"this_atom_index\":0,\"extras\":{\"handler\":\"NAGLChargesHandler\",\"partial_charge_method\":\"openff-gnn-am1bcc-1.0.0.pt\"}}": "{\"id\":\"[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]\",\"mult\":0,\"associated_handler\":\"NAGLChargesHandler\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"this_atom_index\":1,\"extras\":{\"handler\":\"NAGLChargesHandler\",\"partial_charge_method\":\"openff-gnn-am1bcc-1.0.0.pt\"}}": "{\"id\":\"[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]\",\"mult\":1,\"associated_handler\":\"NAGLChargesHandler\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"this_atom_index\":2,\"extras\":{\"handler\":\"NAGLChargesHandler\",\"partial_charge_method\":\"openff-gnn-am1bcc-1.0.0.pt\"}}": "{\"id\":\"[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]\",\"mult\":2,\"associated_handler\":\"NAGLChargesHandler\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"this_atom_index\":3,\"extras\":{\"handler\":\"NAGLChargesHandler\",\"partial_charge_method\":\"openff-gnn-am1bcc-1.0.0.pt\"}}": "{\"id\":\"[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]\",\"mult\":3,\"associated_handler\":\"NAGLChargesHandler\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"this_atom_index\":4,\"extras\":{\"handler\":\"NAGLChargesHandler\",\"partial_charge_method\":\"openff-gnn-am1bcc-1.0.0.pt\"}}": "{\"id\":\"[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]\",\"mult\":4,\"associated_handler\":\"NAGLChargesHandler\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"this_atom_index\":5,\"extras\":{\"handler\":\"NAGLChargesHandler\",\"partial_charge_method\":\"openff-gnn-am1bcc-1.0.0.pt\"}}": "{\"id\":\"[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]\",\"mult\":5,\"associated_handler\":\"NAGLChargesHandler\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"this_atom_index\":6,\"extras\":{\"handler\":\"NAGLChargesHandler\",\"partial_charge_method\":\"openff-gnn-am1bcc-1.0.0.pt\"}}": "{\"id\":\"[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]\",\"mult\":6,\"associated_handler\":\"NAGLChargesHandler\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"this_atom_index\":7,\"extras\":{\"handler\":\"NAGLChargesHandler\",\"partial_charge_method\":\"openff-gnn-am1bcc-1.0.0.pt\"}}": "{\"id\":\"[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]\",\"mult\":7,\"associated_handler\":\"NAGLChargesHandler\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}",
+                "{\"this_atom_index\":8,\"extras\":{\"handler\":\"NAGLChargesHandler\",\"partial_charge_method\":\"openff-gnn-am1bcc-1.0.0.pt\"}}": "{\"id\":\"[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]\",\"mult\":8,\"associated_handler\":\"NAGLChargesHandler\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}"
+            },
+            "potentials": {
+                "{\"id\":\"[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]\",\"mult\":0,\"associated_handler\":\"NAGLChargesHandler\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"charge\":{\"val\":-0.09628999854127566,\"unit\":\"elementary_charge\"}},\"map_key\":null}",
+                "{\"id\":\"[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]\",\"mult\":1,\"associated_handler\":\"NAGLChargesHandler\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"charge\":{\"val\":0.1324500006934007,\"unit\":\"elementary_charge\"}},\"map_key\":null}",
+                "{\"id\":\"[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]\",\"mult\":2,\"associated_handler\":\"NAGLChargesHandler\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"charge\":{\"val\":-0.6029300081233183,\"unit\":\"elementary_charge\"}},\"map_key\":null}",
+                "{\"id\":\"[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]\",\"mult\":3,\"associated_handler\":\"NAGLChargesHandler\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"charge\":{\"val\":0.3982599986096223,\"unit\":\"elementary_charge\"}},\"map_key\":null}",
+                "{\"id\":\"[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]\",\"mult\":4,\"associated_handler\":\"NAGLChargesHandler\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"charge\":{\"val\":0.01728000243504842,\"unit\":\"elementary_charge\"}},\"map_key\":null}",
+                "{\"id\":\"[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]\",\"mult\":5,\"associated_handler\":\"NAGLChargesHandler\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"charge\":{\"val\":0.01728000243504842,\"unit\":\"elementary_charge\"}},\"map_key\":null}",
+                "{\"id\":\"[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]\",\"mult\":6,\"associated_handler\":\"NAGLChargesHandler\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"charge\":{\"val\":0.044650000830491386,\"unit\":\"elementary_charge\"}},\"map_key\":null}",
+                "{\"id\":\"[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]\",\"mult\":7,\"associated_handler\":\"NAGLChargesHandler\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"charge\":{\"val\":0.044650000830491386,\"unit\":\"elementary_charge\"}},\"map_key\":null}",
+                "{\"id\":\"[H:4][C:1]([H:5])([H:6])[C:2]([H:7])([H:8])[O:3][H:9]\",\"mult\":8,\"associated_handler\":\"NAGLChargesHandler\",\"bond_order\":null,\"virtual_site_type\":null,\"cosmetic_attributes\":{}}": "{\"parameters\":{\"charge\":{\"val\":0.044650000830491386,\"unit\":\"elementary_charge\"}},\"map_key\":null}"
+            },
+            "cutoff": {
+                "val": 9.0,
+                "unit": "angstrom"
+            },
+            "scale_12": 0.0,
+            "scale_13": 0.0,
+            "scale_14": 0.8333333333,
+            "scale_15": 1.0,
+            "periodic_potential": "Ewald3D-ConductingBoundary",
+            "nonperiodic_potential": "Coulomb",
+            "exception_potential": "Coulomb",
+            "charges": {
+                "atom_indices=(0,)": {
+                    "val": -0.09628999854127566,
+                    "unit": "elementary_charge"
+                },
+                "atom_indices=(1,)": {
+                    "val": 0.1324500006934007,
+                    "unit": "elementary_charge"
+                },
+                "atom_indices=(2,)": {
+                    "val": -0.6029300081233183,
+                    "unit": "elementary_charge"
+                },
+                "atom_indices=(3,)": {
+                    "val": 0.3982599986096223,
+                    "unit": "elementary_charge"
+                },
+                "atom_indices=(4,)": {
+                    "val": 0.01728000243504842,
+                    "unit": "elementary_charge"
+                },
+                "atom_indices=(5,)": {
+                    "val": 0.01728000243504842,
+                    "unit": "elementary_charge"
+                },
+                "atom_indices=(6,)": {
+                    "val": 0.044650000830491386,
+                    "unit": "elementary_charge"
+                },
+                "atom_indices=(7,)": {
+                    "val": 0.044650000830491386,
+                    "unit": "elementary_charge"
+                },
+                "atom_indices=(8,)": {
+                    "val": 0.044650000830491386,
+                    "unit": "elementary_charge"
+                }
+            }
+        }
+    },
+    "topology": "{\"aromaticity_model\": \"OEAroModel_MDL\", \"constrained_atom_pairs\": {}, \"box_vectors\": null, \"box_vectors_unit\": null, \"molecules\": [{\"name\": \"\", \"atoms\": [{\"atomic_number\": 6, \"formal_charge\": 0, \"is_aromatic\": false, \"stereochemistry\": null, \"name\": \"\", \"metadata\": {}}, {\"atomic_number\": 6, \"formal_charge\": 0, \"is_aromatic\": false, \"stereochemistry\": null, \"name\": \"\", \"metadata\": {}}, {\"atomic_number\": 8, \"formal_charge\": 0, \"is_aromatic\": false, \"stereochemistry\": null, \"name\": \"\", \"metadata\": {}}, {\"atomic_number\": 1, \"formal_charge\": 0, \"is_aromatic\": false, \"stereochemistry\": null, \"name\": \"\", \"metadata\": {}}, {\"atomic_number\": 1, \"formal_charge\": 0, \"is_aromatic\": false, \"stereochemistry\": null, \"name\": \"\", \"metadata\": {}}, {\"atomic_number\": 1, \"formal_charge\": 0, \"is_aromatic\": false, \"stereochemistry\": null, \"name\": \"\", \"metadata\": {}}, {\"atomic_number\": 1, \"formal_charge\": 0, \"is_aromatic\": false, \"stereochemistry\": null, \"name\": \"\", \"metadata\": {}}, {\"atomic_number\": 1, \"formal_charge\": 0, \"is_aromatic\": false, \"stereochemistry\": null, \"name\": \"\", \"metadata\": {}}, {\"atomic_number\": 1, \"formal_charge\": 0, \"is_aromatic\": false, \"stereochemistry\": null, \"name\": \"\", \"metadata\": {}}], \"bonds\": [{\"atom1\": 0, \"atom2\": 1, \"bond_order\": 1, \"is_aromatic\": false, \"stereochemistry\": null, \"fractional_bond_order\": null}, {\"atom1\": 1, \"atom2\": 2, \"bond_order\": 1, \"is_aromatic\": false, \"stereochemistry\": null, \"fractional_bond_order\": null}, {\"atom1\": 2, \"atom2\": 3, \"bond_order\": 1, \"is_aromatic\": false, \"stereochemistry\": null, \"fractional_bond_order\": null}, {\"atom1\": 1, \"atom2\": 4, \"bond_order\": 1, \"is_aromatic\": false, \"stereochemistry\": null, \"fractional_bond_order\": null}, {\"atom1\": 1, \"atom2\": 5, \"bond_order\": 1, \"is_aromatic\": false, \"stereochemistry\": null, \"fractional_bond_order\": null}, {\"atom1\": 0, \"atom2\": 6, \"bond_order\": 1, \"is_aromatic\": false, \"stereochemistry\": null, \"fractional_bond_order\": null}, {\"atom1\": 0, \"atom2\": 7, \"bond_order\": 1, \"is_aromatic\": false, \"stereochemistry\": null, \"fractional_bond_order\": null}, {\"atom1\": 0, \"atom2\": 8, \"bond_order\": 1, \"is_aromatic\": false, \"stereochemistry\": null, \"fractional_bond_order\": null}], \"properties\": {\"atom_map\": {\"0\": 1, \"1\": 2, \"2\": 3, \"3\": 9, \"4\": 7, \"5\": 8, \"6\": 4, \"7\": 5, \"8\": 6}}, \"conformers\": null, \"partial_charges\": null, \"partial_charge_unit\": null, \"hierarchy_schemes\": {}}]}",
+    "mdconfig": null,
+    "box": null,
+    "positions": null,
+    "velocities": null
+}

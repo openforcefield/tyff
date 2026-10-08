@@ -33,7 +33,8 @@ def _run_equilibration(
 
     logger.info("Starting equilibration run")
 
-    compute_config = BulkLiquid(**json.load(open(f"{job_dir}/compute_config.json")))  # type: ignore[typeddict-item]
+    with open(f"{job_dir}/compute_config.json") as f:
+        compute_config = BulkLiquid(**json.load(f))  # type: ignore[typeddict-item]
 
     minimized_files: MinimizationFiles = minimization_future["simulation_files"]
 

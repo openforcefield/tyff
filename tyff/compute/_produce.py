@@ -29,7 +29,8 @@ def _run_production(
 
     logger.info("Starting production run")
 
-    compute_config = BulkLiquid(**json.load(open(f"{job_dir}/compute_config.json")))  # type: ignore[typeddict-item]
+    with open(f"{job_dir}/compute_config.json") as f:
+        compute_config = BulkLiquid(**json.load(f))  # type: ignore[typeddict-item]
 
     files = ProductionFiles(
         topology=File(f"{job_dir}/production_topology.pdb"),

@@ -33,6 +33,12 @@ rdkit-stubs = "*"
 parsl = "*"
 rich = "*"
 tyff = { path = ".", editable = true }
+# probably optional-ish below here
+jupyter = "*"
+nbconvert = "*"
+tensorboard = "*"
+tensorboardx = "*"
+uncertainties = "*"
 
 [dependencies]
 openmm = "8.4.*" # need to help Pixi, since conda solve constraints PyPI solve
@@ -42,15 +48,12 @@ openff-nagl-base = "*"
 openff-nagl-models = "*"
 openmmtools = "*"
 pydantic-units = "*"
+sqlalchemy = ">=2.0.14,<2.1.0"
 pytorch = "*"
+NNPOps = "*"
 datasets = "*"
 bokeh = "3.9.*"
 # probably optional-ish below here
-jupyter = "*"
-nbconvert = "*"
-tensorboard = "*"
-tensorboardx = "*"
-uncertainties = "*"
 openff-packmol = "0.1.*"
 openff-evaluator-base = "*"
 # shims

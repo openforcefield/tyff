@@ -1,3 +1,4 @@
+import json
 import pathlib
 import socket
 
@@ -7,6 +8,8 @@ from rich import print
 
 from tyff.compute.configs import hpc3_config, local_config
 from tyff.compute.fetch import fetch_trajectory_paths_from_target
+from tyff.compute.jobs import make_job_id
+from tyff.compute.prep import _compute_configs_from_data_entry
 from tyff.compute.workflow import SimulationWorkflow
 from tyff.targets.thermo import DataEntry
 
@@ -73,6 +76,7 @@ if "hpc3" in socket.gethostname():
             n_replicates=5,
         )
 
+        # naive property estimate, no tensor math
         for density_target in density_targets:
             workflow.estimate_target(
                 density_target,
@@ -94,6 +98,7 @@ else:
             n_replicates=3,
         )
 
+        # naive property estimate, no tensor math
         for density_target in density_targets:
             workflow.estimate_target(
                 density_target,
@@ -103,6 +108,29 @@ else:
             )
 
 # TODO: Show how to check status while running
+
+# this generally happens under the hood
+compute_configs = [
+    _compute_configs_from_data_entry(
+        target,
+        force_field="openff-2.3.0.offxml",
+        n_molecules=200,
+    )
+    for target in density_targets
+]
+
+print(f"Number of targets for which compute configs were generated: {len(compute_configs)}")
+print(f"Number of replicates for each target: {[len(replicates) for replicates in compute_configs]}")
+
+# this is a list of job directories of each individual job (total of 9, 3x replicates of 3 targets)
+job_ids = [make_job_id(liquid_job) for replicate in compute_configs for row in replicate for liquid_job in row]
+
+for job_id in job_ids:
+    print(job_id)
+    print(json.loads(open(f"density_example/{job_id}/compute_config.json").read()))
+    print(json.loads(open(f"density_example/{job_id}/ensemble_averages.json").read()))
+
+# now for the old-school statistics, etc.
 
 # get trajectory paths from root job directory and per-target info (without knowing internal compute configs)
 trajectory_paths = [

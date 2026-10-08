@@ -5,13 +5,16 @@ from collections.abc import Sequence
 
 import numpy
 import parsl
+import torch
 from parsl import File
 from rich import print
 
+import tyff.converters
 from tyff.compute._files import (
     ProductionFiles,
 )
 from tyff.compute.apps import (
+    create_jacobian,
     minimize_energy,
     prepare_openmm_system,
     prepare_packed_topology,
@@ -28,7 +31,7 @@ logger = logging.getLogger(__name__)  # module-level logger, not root
 
 
 class SimulationWorkflow:
-    def __init__(self, base_dir, parsl_config):
+    def __init__(self, base_dir: str, parsl_config: parsl.Config):
         from tyff.compute._logging import _set_up_logger
 
         pathlib.Path(base_dir).mkdir(exist_ok=True)
@@ -82,6 +85,8 @@ class SimulationWorkflow:
         n_molecules: int,
         n_replicates: int = 3,
     ):
+        # TODO: Rename?
+        """Submit only one target. Not meant to be called by user, instead use `submit_target_batch`."""
 
         from tyff.compute.prep import (
             _compute_configs_from_data_entry,
@@ -118,6 +123,41 @@ class SimulationWorkflow:
         n_molecules: int,
         n_replicates: int = 3,
     ):
+        import openff.toolkit
+
+        from tyff._serialization import dump_tensor_force_field
+
+        unique_smiles = set()
+
+        for target in target_configs:
+            for smiles_ in target["smiles"]:
+                unique_smiles.add(smiles_)
+
+        # TODO: Probably drop this
+        (pathlib.Path(self.base_dir) / "interchanges").mkdir(exist_ok=True)
+
+        interchanges = list()
+
+        force_field_ = openff.toolkit.ForceField(force_field)
+        for index, unique_smiles_ in enumerate(sorted(unique_smiles)):
+            interchange = force_field_.create_interchange(
+                openff.toolkit.Molecule.from_smiles(unique_smiles_).to_topology()
+            )
+            interchanges.append(interchange)
+
+            with open(pathlib.Path(self.base_dir) / "interchanges" / f"interchange_{index}.json", "w") as f:
+                f.write(interchange.model_dump_json())
+
+        self._reference_force_fields = pathlib.Path(self.base_dir) / "reference_force_fields"
+        pathlib.Path(self._reference_force_fields).mkdir(exist_ok=True)
+
+        # this is a "global"/reference force field composed from all unique molecules,
+        # don't think we're going to use the topologies here
+        reference_force_field, _tensor_topologies = tyff.converters.convert_interchange(interchanges)
+
+        # dumps a JSON representation of the tensor representation of the SMIRNOFF force field
+        with open(self._reference_force_fields / f"{force_field}.json", "w") as f:
+            json.dump(dump_tensor_force_field(reference_force_field), f)
 
         return [
             result
@@ -194,12 +234,12 @@ class SimulationWorkflow:
 
         return results
 
-    def _run_liquid_workflow(self, compute_config: BaseComputeConfig) -> dict[str, str | dict[str, ProductionFiles]]:
+    def _run_liquid_workflow(self, compute_config: BaseComputeConfig) -> tuple[dict[str, torch.Tensor], torch.Tensor]:
         return self._common_run(
             compute_config=compute_config,
         )
 
-    def _run_gas_workflow(self, compute_config: BaseComputeConfig) -> dict[str, str | dict[str, ProductionFiles]]:
+    def _run_gas_workflow(self, compute_config: BaseComputeConfig) -> tuple[dict[str, torch.Tensor], torch.Tensor]:
         assert compute_config["n_molecules"] == 1, (
             f"Gas workflow only supports single-molecule simulations, but got {compute_config['n_molecules']=}"
             f"and, more generally, {compute_config=}"
@@ -209,7 +249,7 @@ class SimulationWorkflow:
             compute_config=compute_config,
         )
 
-    def _common_run(self, compute_config: BaseComputeConfig) -> dict[str, str | dict[str, ProductionFiles]]:
+    def _common_run(self, compute_config: BaseComputeConfig) -> tuple[dict[str, torch.Tensor], torch.Tensor]:
         """Common code in _run_liquid_workflow and _run_gas_workflow."""
         job_id = make_job_id(compute_config)
         job_dir = get_job_paths(self.base_dir, job_id)["root"]
@@ -225,7 +265,7 @@ class SimulationWorkflow:
                 indent=4,
             )
 
-        if pathlib.Path(job_dir, "production_trajectory.dcd").exists():
+        if pathlib.Path(job_dir, "ensemble_averages.json").exists():
             logger.info(f"short-circuiting {job_id}!")
             # already done, skip
 
@@ -263,7 +303,13 @@ class SimulationWorkflow:
             job_dir=job_dir,
         )
 
-        return {"job_id": job_id, "future": production_future}
+        jacobian_future = create_jacobian(
+            production_future=production_future,
+            job_dir=job_dir,
+            reference_force_field_path=self._reference_force_fields / f"{compute_config['force_field']}.json",
+        )
+
+        return {"job_id": job_id, "future": jacobian_future}
 
     def shutdown(self):
         parsl.clear()
