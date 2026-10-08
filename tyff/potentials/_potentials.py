@@ -48,7 +48,7 @@ def broadcast_parameters(system: tyff.TensorSystem, potential: tyff.TensorPotent
     parameters = []
 
     for topology, n_copies in zip(system.topologies, system.n_copies, strict=True):
-        parameter_map = topology.parameters[potential.type]
+        parameter_map = topology.parameters[potential.handler_type]
 
         topology_parameters = parameter_map.assignment_matrix @ potential.parameters
 
@@ -91,7 +91,7 @@ def broadcast_exceptions(
     parameter_idxs = []
 
     for topology, n_copies in zip(system.topologies, system.n_copies, strict=True):
-        parameter_map = topology.parameters[potential.type]
+        parameter_map = topology.parameters[potential.handler_type]
 
         if isinstance(parameter_map, tyff.ValenceParameterMap):
             raise NotImplementedError("valence exceptions are not supported")
@@ -101,7 +101,7 @@ def broadcast_exceptions(
 
         if not (assignment_dense.abs().sum(axis=-1) == 1).all():
             raise NotImplementedError(
-                f"exceptions can only be used when each particle is assigned exactly one {potential.type} parameter"
+                f"exceptions can only be used when each particle is assigned exactly one {potential.handler_type} parameter"
             )
 
         assigned_idxs = assignment_dense.argmax(axis=-1)
@@ -155,7 +155,7 @@ def broadcast_idxs(system: tyff.TensorSystem, potential: tyff.TensorPotential) -
     per_topology_idxs = []
 
     for topology, n_copies in zip(system.topologies, system.n_copies, strict=True):
-        parameter_map = topology.parameters[potential.type]
+        parameter_map = topology.parameters[potential.handler_type]
         n_interacting_particles = parameter_map.particle_idxs.shape[-1]
 
         idxs = parameter_map.particle_idxs
@@ -232,7 +232,7 @@ def _precompute_pairwise(
     cutoffs = []
 
     for potential in force_field.potentials:
-        energy_fn = _POTENTIAL_ENERGY_FUNCTIONS[(potential.type, potential.fn)]
+        energy_fn = _POTENTIAL_ENERGY_FUNCTIONS[(potential.handler_type, potential.fn)]
         energy_fn_spec = inspect.signature(energy_fn)
 
         if "pairwise" not in energy_fn_spec.parameters:
@@ -287,7 +287,7 @@ def compute_energy_potential(
 
     system, conformer, box_vectors = _prepare_inputs(system, conformer, box_vectors)
 
-    energy_fn = _POTENTIAL_ENERGY_FUNCTIONS[(potential.type, potential.fn)]
+    energy_fn = _POTENTIAL_ENERGY_FUNCTIONS[(potential.handler_type, potential.fn)]
     energy_fn_spec = inspect.signature(energy_fn)
 
     energy_fn_kwargs = {}

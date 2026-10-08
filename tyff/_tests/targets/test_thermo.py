@@ -29,7 +29,7 @@ from tyff.targets.thermo import (
 @pytest.fixture
 def mock_density_pure() -> DataEntry:
     return {
-        "type": "density",
+        "tag": "density",
         "smiles": ["CO"],
         "x": [1.0],
         "temperature": 298.15,
@@ -44,7 +44,7 @@ def mock_density_pure() -> DataEntry:
 @pytest.fixture
 def mock_density_binary() -> DataEntry:
     return {
-        "type": "density",
+        "tag": "density",
         "smiles": ["CCO", "CO"],
         "x": [0.5, 0.5],
         "temperature": 298.15,
@@ -59,7 +59,7 @@ def mock_density_binary() -> DataEntry:
 @pytest.fixture
 def mock_hvap() -> DataEntry:
     return {
-        "type": "hvap",
+        "tag": "hvap",
         "smiles": ["CCCC"],
         "x": [1.0],
         "temperature": 298.15,
@@ -74,7 +74,7 @@ def mock_hvap() -> DataEntry:
 @pytest.fixture
 def mock_hmix() -> DataEntry:
     return {
-        "type": "hmix",
+        "tag": "hmix",
         "smiles": ["CCO", "CO"],
         "x": [0.5, 0.5],
         "temperature": 298.15,
@@ -636,7 +636,7 @@ def test_create_from_evaluator(data_dir):
         "std": 0.000505,
         "units": "g/mL",
         "source": "mock",
-        "type": "density",
+        "tag": "density",
     }
     assert entries[0] == expected
 

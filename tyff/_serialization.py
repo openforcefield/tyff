@@ -27,7 +27,7 @@ def _load_exceptions(v: Any) -> dict[tuple[int, int], int] | None:
 
 def dump_tensor_potential(p: TensorPotential) -> dict:
     return {
-        "type": p.type,
+        "handler_type": p.handler_type,
         "fn": p.fn,
         "parameters": _dump_tensor(p.parameters),
         "parameter_keys": [k.model_dump() for k in p.parameter_keys],
@@ -42,7 +42,7 @@ def dump_tensor_potential(p: TensorPotential) -> dict:
 
 def load_tensor_potential(d: dict) -> TensorPotential:
     return TensorPotential(
-        type=d["type"],
+        handler_type=d["handler_type"],
         fn=d["fn"],
         parameters=_load_tensor(d["parameters"]),
         parameter_keys=[openff.interchange.models.PotentialKey.model_validate(k) for k in d["parameter_keys"]],

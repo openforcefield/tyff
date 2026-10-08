@@ -18,10 +18,10 @@ def convert_bond_potential(potential: tyff.TensorPotential, system: tyff.TensorS
     idx_offset = 0
 
     for topology, n_copies in zip(system.topologies, system.n_copies, strict=True):
-        parameters = (topology.parameters[potential.type].assignment_matrix @ potential.parameters).detach()
+        parameters = (topology.parameters[potential.handler_type].assignment_matrix @ potential.parameters).detach()
 
         for _ in range(n_copies):
-            atom_idxs = topology.parameters[potential.type].particle_idxs + idx_offset
+            atom_idxs = topology.parameters[potential.handler_type].particle_idxs + idx_offset
 
             for (i, j), (constant, length) in zip(atom_idxs, parameters, strict=True):
                 force.addBond(
@@ -44,10 +44,10 @@ def _convert_angle_potential(potential: tyff.TensorPotential, system: tyff.Tenso
     idx_offset = 0
 
     for topology, n_copies in zip(system.topologies, system.n_copies, strict=True):
-        parameters = (topology.parameters[potential.type].assignment_matrix @ potential.parameters).detach()
+        parameters = (topology.parameters[potential.handler_type].assignment_matrix @ potential.parameters).detach()
 
         for _ in range(n_copies):
-            atom_idxs = topology.parameters[potential.type].particle_idxs + idx_offset
+            atom_idxs = topology.parameters[potential.handler_type].particle_idxs + idx_offset
 
             for (i, j, k), (constant, angle) in zip(atom_idxs, parameters, strict=True):
                 force.addAngle(
@@ -74,10 +74,10 @@ def convert_torsion_potential(
     idx_offset = 0
 
     for topology, n_copies in zip(system.topologies, system.n_copies, strict=True):
-        parameters = (topology.parameters[potential.type].assignment_matrix @ potential.parameters).detach()
+        parameters = (topology.parameters[potential.handler_type].assignment_matrix @ potential.parameters).detach()
 
         for _ in range(n_copies):
-            atom_idxs = topology.parameters[potential.type].particle_idxs + idx_offset
+            atom_idxs = topology.parameters[potential.handler_type].particle_idxs + idx_offset
 
             for (idx_i, idx_j, idx_k, idx_l), (
                 constant,

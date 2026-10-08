@@ -35,7 +35,7 @@ DATA_TYPES = typing.get_args(DataType)
 
 DATA_SCHEMA = pyarrow.schema(
     [
-        ("type", pyarrow.string()),
+        ("tag", pyarrow.string()),
         ("smiles", pyarrow.list_(pyarrow.string())),
         ("x", pyarrow.list_(pyarrow.float64())),
         ("temperature", pyarrow.float64()),
@@ -61,7 +61,7 @@ PHASES = typing.get_args(Phase)
 class DataEntry(typing.TypedDict):
     """Represents a single experimental data point."""
 
-    type: DataType
+    tag: DataType
     """The type of data point."""
 
     smiles: list[str]
@@ -205,7 +205,7 @@ def create_from_evaluator(dataset_file: pathlib.Path) -> datasets.Dataset:
         std = phys_prop["uncertainty"]["value"] * getattr(unit, phys_prop["uncertainty"]["unit"])
         default_units = getattr(unit, _prop_units[prop_type])
         prop = {
-            "type": prop_type,
+            "tag": prop_type,
             "smiles": [smiles_a, smiles_b] if smiles_b is not None else [smiles_a],
             "x": [x_a, x_b] if x_b is not None else [x_a],
             "temperature": temp.to(unit.kelvin).m,
@@ -448,7 +448,7 @@ def _plan_simulations(
     simulations_per_entry = []
 
     for entry in entries:
-        data_type = entry["type"].lower()
+        data_type = entry["tag"].lower()
 
         if data_type not in DATA_TYPES:
             raise NotImplementedError(data_type)
@@ -628,16 +628,16 @@ def _predict(
     observables: dict[Phase, dict[SimulationKey, _Observables]],
     systems: dict[Phase, dict[SimulationKey, tyff.TensorSystem]],
 ) -> tuple[torch.Tensor, torch.Tensor | None]:
-    if entry["type"] == "density":
+    if entry["tag"] == "density":
         value = _predict_density(entry, observables["bulk"][keys["bulk"]])
-    elif entry["type"] == "hvap":
+    elif entry["tag"] == "hvap":
         value = _predict_hvap(
             entry,
             observables["bulk"][keys["bulk"]],
             observables["vacuum"][keys["vacuum"]],
             systems["bulk"][keys["bulk"]],
         )
-    elif entry["type"] == "hmix":
+    elif entry["tag"] == "hmix":
         value = _predict_hmix(
             entry,
             observables["bulk"][keys["bulk"]],
@@ -648,7 +648,7 @@ def _predict(
             systems["bulk"][keys["bulk_1"]],
         )
     else:
-        raise NotImplementedError(entry["type"])
+        raise NotImplementedError(entry["tag"])
 
     return value
 
@@ -713,7 +713,7 @@ def predict(
     for entry, keys in zip(entries, entry_to_simulation, strict=True):
         value, std = _predict(entry, keys, observables, required_simulations)
 
-        type_scale = per_type_scales.get(entry["type"], 1.0)
+        type_scale = per_type_scales.get(entry["tag"], 1.0)
 
         predicted.append(value * type_scale)
         predicted_std.append(torch.nan if std is None else std * abs(type_scale))
@@ -726,7 +726,7 @@ def predict(
 
             verbose_rows.append(
                 {
-                    "type": f"{entry['type']} [{entry['units']}]",
+                    "tag": f"{entry['tag']} [{entry['units']}]",
                     "smiles": [tyff.utils.molecule.unmap_smiles(smiles) for smiles in entry["smiles"]],
                     "pred": f"{float(value):.3f} ± {float(std):.3f}",
                     "ref": f"{float(entry['value']):.3f}{std_ref}",
