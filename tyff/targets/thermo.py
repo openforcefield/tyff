@@ -144,12 +144,7 @@ def create_dataset(*rows: DataEntry) -> datasets.Dataset:
     """
 
     for row in rows:
-        row["smiles_a"] = tyff.utils.molecule.map_smiles(row["smiles_a"])
-
-        if row["smiles_b"] is None:
-            continue
-
-        row["smiles_b"] = tyff.utils.molecule.map_smiles(row["smiles_b"])
+        row["smiles"] = [tyff.utils.molecule.map_smiles(smiles) for smiles in row["smiles"]]
 
     # TODO: validate rows
     table = pyarrow.Table.from_pylist([*rows], schema=DATA_SCHEMA)
@@ -211,10 +206,8 @@ def create_from_evaluator(dataset_file: pathlib.Path) -> datasets.Dataset:
         default_units = getattr(unit, _prop_units[prop_type])
         prop = {
             "type": prop_type,
-            "smiles_a": smiles_a,
-            "x_a": x_a,
-            "smiles_b": smiles_b,
-            "x_b": x_b,
+            "smiles": [smiles_a, smiles_b] if smiles_b is not None else [smiles_a],
+            "x": [x_a, x_b] if x_b is not None else [x_a],
             "temperature": temp.to(unit.kelvin).m,
             "pressure": pressure.to(unit.kilopascal).m,
             "value": value.to(default_units).m,
@@ -236,20 +229,17 @@ def extract_smiles(dataset: datasets.Dataset) -> list[str]:
     Returns:
         The unique SMILES strings with full atom mapping.
     """
+    return_set = set()
 
-    def _flatten_list_of_smiles_to_set(smiles_list: list[str]) -> set[str]:
-        unique_smiles: set[str] = set()
+    def map_function(batch):
+        for row in batch["smiles"]:
+            return_set.update(row)
+        return batch
 
-        assert isinstance(smiles_list, list)
+    # Update the set chunk by chunk
+    dataset.map(map_function, batched=True)
 
-        for value in smiles_list:
-            assert isinstance(value, str)
-
-            unique_smiles.add(value)
-
-        return unique_smiles
-
-    return sorted(_flatten_list_of_smiles_to_set(dataset.unique("smiles")))
+    return sorted(return_set)
 
 
 def _convert_entry_to_system(
@@ -475,7 +465,7 @@ def _plan_simulations(
             required_sims["bulk"] = key
 
         if _REQUIRES_PURE_SIM[data_type]:
-            for i, smiles in enumerate((entry["smiles_a"], entry["smiles_b"])):
+            for i, smiles in enumerate(entry["smiles"]):
                 key = SimulationKey((smiles,), (max_mols,), entry["temperature"], entry["pressure"])
                 system = tyff.TensorSystem([topologies[smiles]], [max_mols], True)  # type: ignore[index]
 
@@ -483,10 +473,10 @@ def _plan_simulations(
                 required_sims[f"bulk_{i}"] = key
 
         if _REQUIRES_VACUUM_SIM[data_type]:
-            assert entry["smiles_b"] is None, "vacuum sims only support pure systems"
+            assert len(entry["smiles"]) == 1, "vacuum sims only support pure systems"
 
-            system = tyff.TensorSystem([topologies[entry["smiles_a"]]], [1], False)
-            key = SimulationKey((entry["smiles_a"],), (1,), entry["temperature"], None)
+            system = tyff.TensorSystem([topologies[entry["smiles"][0]]], [1], False)
+            key = SimulationKey((entry["smiles"][0],), (1,), entry["temperature"], None)
 
             systems_per_phase["vacuum"][key] = system
             required_sims["vacuum"] = key
@@ -737,10 +727,7 @@ def predict(
             verbose_rows.append(
                 {
                     "type": f"{entry['type']} [{entry['units']}]",
-                    "smiles_a": tyff.utils.molecule.unmap_smiles(entry["smiles_a"]),
-                    "smiles_b": (
-                        "" if entry["smiles_b"] is None else tyff.utils.molecule.unmap_smiles(entry["smiles_b"])
-                    ),
+                    "smiles": [tyff.utils.molecule.unmap_smiles(smiles) for smiles in entry["smiles"]],
                     "pred": f"{float(value):.3f} ± {float(std):.3f}",
                     "ref": f"{float(entry['value']):.3f}{std_ref}",
                 }
