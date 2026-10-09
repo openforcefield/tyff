@@ -1880,7 +1880,7 @@ class ThermoMLProperty:
 
         # Evaluator had a .metadata attribute which we don't have here
         obj = {
-            "type": self.type_string,
+            "tag": self.type_string,
             "substance": str(self.substance),
             "phase": str(self.phase),
             "temperature": _standardize_temperature(self.temperature),

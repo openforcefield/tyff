@@ -35,11 +35,9 @@ DATA_TYPES = typing.get_args(DataType)
 
 DATA_SCHEMA = pyarrow.schema(
     [
-        ("type", pyarrow.string()),
-        ("smiles_a", pyarrow.string()),
-        ("x_a", pyarrow.float64()),
-        ("smiles_b", pyarrow.string()),
-        ("x_b", pyarrow.float64()),
+        ("tag", pyarrow.string()),
+        ("smiles", pyarrow.list_(pyarrow.string())),
+        ("x", pyarrow.list_(pyarrow.float64())),
         ("temperature", pyarrow.float64()),
         ("pressure", pyarrow.float64()),
         ("value", pyarrow.float64()),
@@ -63,18 +61,13 @@ PHASES = typing.get_args(Phase)
 class DataEntry(typing.TypedDict):
     """Represents a single experimental data point."""
 
-    type: DataType
+    tag: DataType
     """The type of data point."""
 
-    smiles_a: str
-    """The SMILES definition of the first component."""
-    x_a: float | None
-    """The mole fraction of the first component. This must be set to 1.0 if the data"""
-
-    smiles_b: str | None
-    """The SMILES definition of the second component if present."""
-    x_b: float | None
-    """The mole fraction of the second component if present."""
+    smiles: list[str]
+    """The SMILES definitions of each components."""
+    x: list[float]
+    """The mole fractions of each components. Values must sum to 1.0."""
 
     temperature: float
     """The temperature at which the data point was measured."""
@@ -151,12 +144,7 @@ def create_dataset(*rows: DataEntry) -> datasets.Dataset:
     """
 
     for row in rows:
-        row["smiles_a"] = tyff.utils.molecule.map_smiles(row["smiles_a"])
-
-        if row["smiles_b"] is None:
-            continue
-
-        row["smiles_b"] = tyff.utils.molecule.map_smiles(row["smiles_b"])
+        row["smiles"] = [tyff.utils.molecule.map_smiles(smiles) for smiles in row["smiles"]]
 
     # TODO: validate rows
     table = pyarrow.Table.from_pylist([*rows], schema=DATA_SCHEMA)
@@ -217,11 +205,9 @@ def create_from_evaluator(dataset_file: pathlib.Path) -> datasets.Dataset:
         std = phys_prop["uncertainty"]["value"] * getattr(unit, phys_prop["uncertainty"]["unit"])
         default_units = getattr(unit, _prop_units[prop_type])
         prop = {
-            "type": prop_type,
-            "smiles_a": smiles_a,
-            "x_a": x_a,
-            "smiles_b": smiles_b,
-            "x_b": x_b,
+            "tag": prop_type,
+            "smiles": [smiles_a, smiles_b] if smiles_b is not None else [smiles_a],
+            "x": [x_a, x_b] if x_b is not None else [x_a],
             "temperature": temp.to(unit.kelvin).m,
             "pressure": pressure.to(unit.kilopascal).m,
             "value": value.to(default_units).m,
@@ -243,11 +229,17 @@ def extract_smiles(dataset: datasets.Dataset) -> list[str]:
     Returns:
         The unique SMILES strings with full atom mapping.
     """
-    smiles_a = {smiles for smiles in dataset.unique("smiles_a") if smiles is not None}
-    smiles_b = {smiles for smiles in dataset.unique("smiles_b") if smiles is not None}
+    return_set = set()
 
-    smiles_unique = sorted({*smiles_a, *smiles_b})
-    return smiles_unique
+    def map_function(batch):
+        for row in batch["smiles"]:
+            return_set.update(row)
+        return batch
+
+    # Update the set chunk by chunk
+    dataset.map(map_function, batched=True)
+
+    return sorted(return_set)
 
 
 def _convert_entry_to_system(
@@ -264,12 +256,15 @@ def _convert_entry_to_system(
     Returns:
         The system and its associated key.
     """
-    smiles_a: str = entry["smiles_a"]
+    if len(entry["smiles"]) > 2 or len(entry["x"]) > 2:
+        raise NotImplementedError("Only pure and binary mixtures are currently supported.")
 
-    fraction_a = 0.0 if entry["x_a"] is None else entry["x_a"]
-    fraction_b = 0.0 if entry["x_b"] is None else entry["x_b"]
+    smiles_a: str = entry["smiles"][0]
 
-    assert numpy.isclose(fraction_a + fraction_b, 1.0)
+    fraction_a = entry["x"][0]
+    fraction_b = entry["x"][1] if len(entry["x"]) > 1 else 0.0
+
+    assert numpy.isclose(fraction_a + fraction_b, 1.0), "Mole fractions do not sum to 1.0"
 
     n_copies_a = int(max_mols * fraction_a)
     n_copies_b = int(max_mols * fraction_b)
@@ -280,7 +275,7 @@ def _convert_entry_to_system(
     n_copies = [n_copies_a]
 
     if n_copies_b > 0:
-        smiles_b: str = entry["smiles_b"]
+        smiles_b: str = entry["smiles"][1]
         smiles.append(smiles_b)
 
         system_topologies.append(topologies[smiles_b])
@@ -453,7 +448,7 @@ def _plan_simulations(
     simulations_per_entry = []
 
     for entry in entries:
-        data_type = entry["type"].lower()
+        data_type = entry["tag"].lower()
 
         if data_type not in DATA_TYPES:
             raise NotImplementedError(data_type)
@@ -470,7 +465,7 @@ def _plan_simulations(
             required_sims["bulk"] = key
 
         if _REQUIRES_PURE_SIM[data_type]:
-            for i, smiles in enumerate((entry["smiles_a"], entry["smiles_b"])):
+            for i, smiles in enumerate(entry["smiles"]):
                 key = SimulationKey((smiles,), (max_mols,), entry["temperature"], entry["pressure"])
                 system = tyff.TensorSystem([topologies[smiles]], [max_mols], True)  # type: ignore[index]
 
@@ -478,10 +473,10 @@ def _plan_simulations(
                 required_sims[f"bulk_{i}"] = key
 
         if _REQUIRES_VACUUM_SIM[data_type]:
-            assert entry["smiles_b"] is None, "vacuum sims only support pure systems"
+            assert len(entry["smiles"]) == 1, "vacuum sims only support pure systems"
 
-            system = tyff.TensorSystem([topologies[entry["smiles_a"]]], [1], False)
-            key = SimulationKey((entry["smiles_a"],), (1,), entry["temperature"], None)
+            system = tyff.TensorSystem([topologies[entry["smiles"][0]]], [1], False)
+            key = SimulationKey((entry["smiles"][0],), (1,), entry["temperature"], None)
 
             systems_per_phase["vacuum"][key] = system
             required_sims["vacuum"] = key
@@ -633,16 +628,16 @@ def _predict(
     observables: dict[Phase, dict[SimulationKey, _Observables]],
     systems: dict[Phase, dict[SimulationKey, tyff.TensorSystem]],
 ) -> tuple[torch.Tensor, torch.Tensor | None]:
-    if entry["type"] == "density":
+    if entry["tag"] == "density":
         value = _predict_density(entry, observables["bulk"][keys["bulk"]])
-    elif entry["type"] == "hvap":
+    elif entry["tag"] == "hvap":
         value = _predict_hvap(
             entry,
             observables["bulk"][keys["bulk"]],
             observables["vacuum"][keys["vacuum"]],
             systems["bulk"][keys["bulk"]],
         )
-    elif entry["type"] == "hmix":
+    elif entry["tag"] == "hmix":
         value = _predict_hmix(
             entry,
             observables["bulk"][keys["bulk"]],
@@ -653,7 +648,7 @@ def _predict(
             systems["bulk"][keys["bulk_1"]],
         )
     else:
-        raise NotImplementedError(entry["type"])
+        raise NotImplementedError(entry["tag"])
 
     return value
 
@@ -718,7 +713,7 @@ def predict(
     for entry, keys in zip(entries, entry_to_simulation, strict=True):
         value, std = _predict(entry, keys, observables, required_simulations)
 
-        type_scale = per_type_scales.get(entry["type"], 1.0)
+        type_scale = per_type_scales.get(entry["tag"], 1.0)
 
         predicted.append(value * type_scale)
         predicted_std.append(torch.nan if std is None else std * abs(type_scale))
@@ -731,11 +726,8 @@ def predict(
 
             verbose_rows.append(
                 {
-                    "type": f"{entry['type']} [{entry['units']}]",
-                    "smiles_a": tyff.utils.molecule.unmap_smiles(entry["smiles_a"]),
-                    "smiles_b": (
-                        "" if entry["smiles_b"] is None else tyff.utils.molecule.unmap_smiles(entry["smiles_b"])
-                    ),
+                    "tag": f"{entry['tag']} [{entry['units']}]",
+                    "smiles": [tyff.utils.molecule.unmap_smiles(smiles) for smiles in entry["smiles"]],
                     "pred": f"{float(value):.3f} ± {float(std):.3f}",
                     "ref": f"{float(entry['value']):.3f}{std_ref}",
                 }

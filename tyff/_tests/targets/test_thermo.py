@@ -29,11 +29,9 @@ from tyff.targets.thermo import (
 @pytest.fixture
 def mock_density_pure() -> DataEntry:
     return {
-        "type": "density",
-        "smiles_a": "CO",
-        "x_a": 1.0,
-        "smiles_b": None,
-        "x_b": None,
+        "tag": "density",
+        "smiles": ["CO"],
+        "x": [1.0],
         "temperature": 298.15,
         "pressure": 1.0,
         "value": 0.785,
@@ -46,11 +44,9 @@ def mock_density_pure() -> DataEntry:
 @pytest.fixture
 def mock_density_binary() -> DataEntry:
     return {
-        "type": "density",
-        "smiles_a": "CCO",
-        "x_a": 0.5,
-        "smiles_b": "CO",
-        "x_b": 0.5,
+        "tag": "density",
+        "smiles": ["CCO", "CO"],
+        "x": [0.5, 0.5],
         "temperature": 298.15,
         "pressure": 1.0,
         "value": 0.9,
@@ -63,11 +59,9 @@ def mock_density_binary() -> DataEntry:
 @pytest.fixture
 def mock_hvap() -> DataEntry:
     return {
-        "type": "hvap",
-        "smiles_a": "CCCC",
-        "x_a": 1.0,
-        "smiles_b": None,
-        "x_b": None,
+        "tag": "hvap",
+        "smiles": ["CCCC"],
+        "x": [1.0],
         "temperature": 298.15,
         "pressure": 1.0,
         "value": 1.234,
@@ -80,11 +74,9 @@ def mock_hvap() -> DataEntry:
 @pytest.fixture
 def mock_hmix() -> DataEntry:
     return {
-        "type": "hmix",
-        "smiles_a": "CCO",
-        "x_a": 0.5,
-        "smiles_b": "CO",
-        "x_b": 0.5,
+        "tag": "hmix",
+        "smiles": ["CCO", "CO"],
+        "x": [0.5, 0.5],
         "temperature": 298.15,
         "pressure": 1.0,
         "value": 0.4321,
@@ -611,7 +603,7 @@ def test_default_closure(tmp_cwd, mock_density_pure, mocker):
         autospec=True,
         return_value=(mock_y_ref, None, mock_y_pred, None),
     )
-    mock_topologies = {mock_density_pure["smiles_a"]: mocker.MagicMock()}
+    mock_topologies = {mock_density_pure["smiles"][0]: mocker.MagicMock()}
     mock_trainable = mocker.MagicMock()
 
     closure_fn = default_closure(mock_trainable, mock_topologies, dataset, None)
@@ -630,17 +622,21 @@ def test_create_from_evaluator(data_dir):
 
     entries = list(tyff.utils.dataset.iter_dataset(dataset))
     expected = {
-        "smiles_a": "[C:1]([C:2]([O:3][H:9])([H:7])[H:8])([H:4])([H:5])[H:6]",
-        "x_a": 0.48268,
-        "smiles_b": "[O:1]([H:2])[H:3]",
-        "x_b": 0.51732,
+        "smiles": [
+            "[C:1]([C:2]([O:3][H:9])([H:7])[H:8])([H:4])([H:5])[H:6]",
+            "[O:1]([H:2])[H:3]",
+        ],
+        "x": [
+            0.48268,
+            0.51732,
+        ],
         "temperature": 298.15,
         "pressure": 101.3,
         "value": 0.99,
         "std": 0.000505,
         "units": "g/mL",
         "source": "mock",
-        "type": "density",
+        "tag": "density",
     }
     assert entries[0] == expected
 

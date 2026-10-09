@@ -87,7 +87,7 @@ def test_pack_unpack_force_field(mocker):
     for i, (original, unpacked) in enumerate(
         zip(force_field.potentials, unpacked_force_field.potentials, strict=True)
     ):
-        assert original.type == unpacked.type
+        assert original.handler_type == unpacked.handler_type
         assert original.fn == unpacked.fn
 
         assert original.parameters.shape == unpacked.parameters.shape

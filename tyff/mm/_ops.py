@@ -57,7 +57,7 @@ def _pack_force_field(
         lookup tables mapping potential types to their corresponding parameters and
         attributes in the tuple, and a flag indicating if v-sites are present.
     """
-    potential_types = [potential.type for potential in force_field.potentials]
+    potential_types = [potential.handler_type for potential in force_field.potentials]
 
     parameters = [potential.parameters for potential in force_field.potentials]
     attributes = [potential.attributes for potential in force_field.potentials]
@@ -96,11 +96,11 @@ def _unpack_force_field(
     potentials = []
 
     for original_potential in force_field.potentials:
-        parameters = tensors[parameter_lookup[original_potential.type]]
-        attributes = tensors[attribute_lookup[original_potential.type]]
+        parameters = tensors[parameter_lookup[original_potential.handler_type]]
+        attributes = tensors[attribute_lookup[original_potential.handler_type]]
 
         potential = tyff.TensorPotential(
-            type=original_potential.type,
+            handler_type=original_potential.handler_type,
             fn=original_potential.fn,
             parameters=parameters,
             parameter_keys=original_potential.parameter_keys,

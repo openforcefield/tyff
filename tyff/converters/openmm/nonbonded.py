@@ -252,7 +252,7 @@ def _add_parameters_to_vdw_without_lookup(
     idx_offset = 0
 
     for topology, n_copies in zip(system.topologies, system.n_copies, strict=True):
-        parameter_map = topology.parameters[potential.type]
+        parameter_map = topology.parameters[potential.handler_type]
         parameters = parameter_map.assignment_matrix @ potential.parameters.detach()
 
         for _ in range(n_copies):
@@ -306,14 +306,14 @@ def _add_parameters_to_vdw_with_lookup(
     idx_offset = 0
 
     for topology, n_copies in zip(system.topologies, system.n_copies, strict=True):
-        parameter_map = topology.parameters[potential.type]
+        parameter_map = topology.parameters[potential.handler_type]
 
         assignment_dense = parameter_map.assignment_matrix.to_dense()
         assigned_idxs = assignment_dense.argmax(axis=-1)
 
         if not (assignment_dense.abs().sum(axis=-1) == 1).all():
             raise NotImplementedError(
-                f"exceptions can only be used when each particle is assigned exactly one {potential.type} parameter"
+                f"exceptions can only be used when each particle is assigned exactly one {potential.handler_type} parameter"
             )
 
         for _ in range(n_copies):
@@ -432,7 +432,7 @@ def convert_lj_potential(
     idx_offset = 0
 
     for topology, n_copies in zip(system.topologies, system.n_copies, strict=True):
-        parameter_map = topology.parameters[potential.type]
+        parameter_map = topology.parameters[potential.handler_type]
         parameters = parameter_map.assignment_matrix @ potential.parameters.detach()
 
         for _ in range(n_copies):
@@ -495,7 +495,7 @@ def convert_coulomb_potential(potential: tyff.TensorPotential, system: tyff.Tens
     idx_offset = 0
 
     for topology, n_copies in zip(system.topologies, system.n_copies, strict=True):
-        parameter_map = topology.parameters[potential.type]
+        parameter_map = topology.parameters[potential.handler_type]
         parameters = parameter_map.assignment_matrix @ potential.parameters.detach()
 
         for _ in range(n_copies):
