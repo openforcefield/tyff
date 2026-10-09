@@ -1,0 +1,58 @@
+column,description,dtype,units
+smiles0,SMILES string of the first monomer,str,
+smiles1,SMILES string of the second monomer,str,
+charge0,Charge of the first monomer,int,elementary charge
+charge1,Charge of the second monomer,int,elementary charge
+natoms0,Number of atoms in the first monomer,int,
+natoms1,Number of atoms in the second monomer,int,
+system_id,Identifier for each unique dimer system,int,
+group_orig,"Generation method for a group of geometries:'qm_opt_dimer', 'md_dimer', 'md_nmer', 'md_solvation'",str,
+group_id,"Identifier for a group of geometries originating from acommon reference geometry, either (1) points along a radialscan, or, (2) dimers belonging to a cluster",int,
+k_index,"Number of 0.1 Angstrom offsets from a common referencegeometry (from a radial scan, -50 <= k_index <= 40) or a unique identifier for a specific dimer geometry (from a cluster, k_index >= 100)",int,
+geom_id,Identifier for a single unique geometry,int,
+cc_basis,Basis set used in the CCSD(T) calculation,str,
+cc_HF,Hartree-fock interaction energy (from the CCSD(T) calculation),float,kcal/mol
+cc_MP2_os,Singlet (opposite-spin) MP2 correlation interaction energyfrom the CCSD(T) calculation,float,kcal/mol
+cc_MP2_ss,Triplet (same-spin) MP2 correlation interaction energy fromthe CCSD(T) calculation,float,kcal/mol
+cc_MP2,"MP2 correlation interaction energy from the CCSD(T)calculation, i.e., 'cc_MP2_os + cc_MP2_ss'",,kcal/mol
+cc_CCSD_os,Singlet (opposite-spin) CCSD correlation interactionenergy,float,kcal/mol
+cc_CCSD_ss,Triplet (same-spin) CCSD correlation interaction energy,float,kcal/mol
+cc_(T),(T) contribution to the correlation interaction energy,float,kcal/mol
+cc_[T],[T] [T] contribution to the correlation interaction energy,float,kcal/mol
+cc_MP2_all,"Total MP2 interaction energy from the CCSD(T) calculation, i.e., 'cc_MP2_os + cc_MP2_ss + cc_HF'",float,kcal/mol
+cc_CCSD(T)_all,"Total CCSD(T) interaction energy, i.e., 'cc_CCSD_os + cc_CCSD_ss + cc_(T) + cc_HF'",float,kcal/mol
+cc_delta_CCSD(T),"Post-MP2 CCSD(T) correlation interaction correction,i.e., 'cc_CCSD(T) - cc_MP2'",float,kcal/mol
+qz_HF,Hartree-Fock interaction energy,float,kcal/mol
+qz_MP2_os,Singlet (opposite-spin) MP2 correlation interaction energy,float,kcal/mol
+qz_MP2_ss,Triplet (same-spin) MP2 correlation interaction energy,float,kcal/mol
+qz_MP2_all,"Total MP2 interaction energy, i.e., 'qz_MP2_os + qz_MP2_ss + qz_HF'",float,kcal/mol
+tz_HF,Hartree-Fock interaction energy,float,kcal/mol
+tz_MP2_os,Singlet (opposite-spin) MP2 correlation interaction energy,float,kcal/mol
+tz_MP2_ss,Triplet (same-spin) MP2 correlation interaction energy,float,kcal/mol
+tz_MP2_all,"Total MP2 interaction energy, i.e., 'tz_MP2_os + tz_MP2_ss + tz_HF'",float,kcal/mol
+cbs_MP2_os,Singlet (opposite-spin) MP2 correlation interaction energy(CBS extrapolation from av[TQ]z),float,kcal/mol
+cbs_MP2_ss,Triplet (same-spin) MP2 correlation interaction energy (CBS extrapolation from av[TQ]z),float,kcal/mol
+cbs_MP2_all,"Total CBS MP2 interaction energy, i.e., 'qz_HF + cbs_MP2_os + cbs_MP2_ss'",float,kcal/mol
+cbs_CCSD(T)_all,"Total CBS CCSD(T) interaction energy, i.e.,'cbs_MP2_all + cc_delta_CCSD(T)'",float,kcal/mol
+espx_HF_es,Hartree-Fock electrostatic interaction energy,float,kcal/mol
+espx_HF_hl,Hartree-Fock Heitler-London interaction energy,float,kcal/mol
+espx_HF_ovl,Hartree-Fock density matrix overlap,float,
+espx_MP2_es,MP2 electrostatic interaction energy,float,kcal/mol
+espx_MP2_ovl,MP2 density matrix overlap,float,
+sapt_es,SAPT0 first-order electrostatic energy,float,kcal/mol
+sapt_ex,SAPT0 first-order exchange energy,float,kcal/mol
+sapt_exs2,SAPT0 first-order exchange energy (S^2 approximation),float,kcal/mol
+sapt_ind,SAPT0 second-order induction energy,float,kcal/mol
+sapt_exind,SAPT0 second-order exchange-induction energy,float,kcal/mol
+sapt_disp,SAPT0 second-order dispersion energy,float,kcal/mol
+sapt_exdisp_os,SAPT0 singlet (opposite-spin) second-orderexchange-dispersion energy,float,kcal/mol
+sapt_exdisp_ss,SAPT0 triplet (same-spin) second-orderexchange-dispersion energy,float,kcal/mol
+sapt_delta_HF,Difference between the HF interaction energy and the lowest-order SAPT0 interaction terms,float,kcal/mol
+sapt_all,"Total SAPT0 interaction energy, i.e., 'sapt_es + sapt_ind + sapt_exind + sapt_delta_HF + sapt_disp + sapt_exdisp_os + sapt_exdisp_ss'",float,kcal/mol
+nn_CCSD(T)_all,SNS-MP2 predicted all-components CBS CCSD(T)interaction energy,float,kcal/mol
+nn_CCSD(T)_all_05,5th percentile SNS-MP2 predicted all-componentsCBS CCSD(T) interaction energy,float,kcal/mol
+nn_CCSD(T)_all_95,95th percentile SNS-MP2 predicted all-componentsCBS CCSD(T) interaction energy,float,kcal/mol
+xyz,"Atomic positions ordered as: x0, y0, z0, x1, y1, z1, ..., xn, yn, zn",str,angstrom
+elements,"Atoms present in the system, in the same order as thecoordinates in 'xyz'",str,
+reference,"Silver or bronze-standard reference interaction energy, (present in DESS66 and DESS66x8 only)",float,
+system_name,Canonical S66 or S66x8 system name (present in DESS66 and DESS66x8 only),str,
