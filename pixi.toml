@@ -10,7 +10,7 @@ run_tests = {
     env = {OPENMM_DEFAULT_PLATFORM="CPU"},
 }
 dev_tests = {
-    cmd = "python -m pytest -x --lf tyff/_tests",
+    cmd = "python -m pytest -s -x --pdb --lf tyff/_tests",
     env = {OPENMM_DEFAULT_PLATFORM="CPU"},
 }
 
@@ -32,16 +32,21 @@ dask-kubernetes = "*"
 rdkit-stubs = "*"
 parsl = "==2026.*"
 rich = "*"
+tyff = { path = ".", editable = true }
+# probably optional-ish below here
+jupyter = "*"
 nbconvert = "*"
-uncertainties = "*"
 tensorboard = "*"
 tensorboardx = "*"
-tyff = { path = ".", editable = true }
+uncertainties = "*"
 
 [dependencies]
 openff-toolkit = "*"
 openmmtools = "*"
 pydantic-units = "*"
+sqlalchemy = ">=2.0.14,<2.1.0"
+pytorch = "*"
+NNPOps = "*"
 datasets = "*"
 bokeh = "3.9.*"
 # probably optional-ish below here
