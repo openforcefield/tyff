@@ -1,34 +1,36 @@
 [workspace]
 name = "tyff"
-channels = [ "conda-forge"]
-platforms = [ "linux-64", "osx-arm64" ]
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-arm64"]
 
 [tasks]
 run_mypy = "python -m mypy -p 'tyff'"
-run_tests = {
-    cmd = "python -m pytest -n logical tyff/_tests",
-    env = {OPENMM_DEFAULT_PLATFORM="CPU"},
-}
-dev_tests = {
-    cmd = "python -m pytest -s -x --pdb --lf tyff/_tests",
-    env = {OPENMM_DEFAULT_PLATFORM="CPU"},
-}
+run_tests = { cmd = "python -m pytest -n logical tyff/_tests", env = { OPENMM_DEFAULT_PLATFORM = "CPU" } }
+dev_tests = { cmd = "python -m pytest -s -x --pdb --lf tyff/_tests", env = { OPENMM_DEFAULT_PLATFORM = "CPU" } }
+
+[dependencies]
+# conda-only dependencies
+openff-toolkit = "*"
+pydantic-units = "*"
+NNPOps = "*"
+# probably optional-ish below here
+openff-packmol = "0.1.*"
+openff-evaluator-base = "*"
+# shims / constraints to help solver
+pyarrow = "20.*"
+bokeh = "3.9.*"
+filelock = "<4"  # parsl stuck on 3.x
+sqlalchemy = ">=2.0.14,<2.1.0"
 
 [pypi-dependencies]
 pydantic = "*"
 pyyaml = "*"
 numpy = "*"
 setuptools_scm = "*"
-distributed = "*"
 openmm = "*"
 symengine = "*"
 rdkit = "*"
-matplotlib = "*"
-panel = "*"
 sqlmodel = "*"
-dask = "*"
-dask-jobqueue = "*"
-dask-kubernetes = "*"
 rdkit-stubs = "*"
 parsl = "==2026.*"
 rich = "*"
@@ -39,28 +41,14 @@ nbconvert = "*"
 tensorboard = "*"
 tensorboardx = "*"
 uncertainties = "*"
-
-[dependencies]
-openff-toolkit = "*"
-openmmtools = "*"
-pydantic-units = "*"
-sqlalchemy = ">=2.0.14,<2.1.0"
-pytorch = "*"
-NNPOps = "*"
-datasets = "*"
-bokeh = "3.9.*"
-# probably optional-ish below here
-openff-packmol = "0.1.*"
-openff-evaluator-base = "*"
-# shims
-pyarrow = "20.*"
-filelock = "<4"  # parsl stuck on 3.x
+matplotlib = "*"
+panel = "*"
 
 [environments]
-py312amber = [ "py312", "ambertools", "test", "typing" ]
-py312openeye = [ "py312", "openeye", "packmol", "test", "typing" ]
-dev = [ "py312", "openeye", "test", "typing", "dev" ]
-hpc3 = ["py312", "openeye", "cu130", "packmol" ]
+py312amber = ["py312", "ambertools", "test", "typing"]
+py312openeye = ["py312", "openeye", "packmol", "test", "typing"]
+dev = ["py312", "openeye", "test", "typing", "dev"]
+hpc3 = ["py312", "openeye", "cu130", "packmol"]
 
 [feature.dev.dependencies]
 # these PyPI builds are marked as pre-release only for some reason
@@ -77,7 +65,7 @@ ruff = "*"
 ambertools = "*"
 
 [feature.openeye]
-channels = [ "openeye", "conda-forge" ]
+channels = ["openeye", "conda-forge"]
 dependencies = { openeye-toolkits = "*" }
 
 [feature.packmol.dependencies]
