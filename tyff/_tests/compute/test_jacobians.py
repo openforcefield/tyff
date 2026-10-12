@@ -112,7 +112,6 @@ def test_jacobian_shape(production_future, tmp_path):
 
     # number of columns in jacobian should be equal to the number of values in the
     # (tensor) force field, defined by summing up the number of values in each tensor
-
     assert jacobians.shape[1] == n_values
 
 
@@ -137,10 +136,11 @@ def test_swapping_molecule_order_same_jacobian_values(production_future, tmp_pat
         reference_force_field_path=tmp_path / "ref.ff.json",
     )
 
-    # check that, using everything else the same including the same global force field, swapping
-    # molecules 0 and 1 in the compute batch gets you the same jacobian values as if not
     if swap_molecules:
-        pytest.xfail("Cannot get this test fully working yet")
+        pytest.xfail("Swapping molecules does not produce numerically identical Jacobians yet")
+        # check that, using everything else the same including the same global force field, swapping
+        # molecules 0 and 1 in the compute batch gets you the same jacobian values as if not
+
         shutil.copy(
             str(files("tyff") / "_tests/data/app_files/sample_density/single_molecule_interchange_0.json"),
             str(tmp_path / "single_molecule_interchange_1.json"),
@@ -161,12 +161,10 @@ def test_swapping_molecule_order_same_jacobian_values(production_future, tmp_pat
         n_shift = int(n_atoms_interchange_molecule0 * 200 * 0.5)
 
         shuffle_coords(
-            n=n_shift,  # shift this number of atoms around
-            input_msgpack=tmp_path / "production_trajectory.msgpack",
-            output_msgpack=tmp_path / "new.msgpack",
+            n=n_shift,
+            input_msgpack=str(files("tyff") / "_tests/data/app_files/sample_density/production_trajectory.msgpack"),
+            output_msgpack=str(tmp_path / "production_trajectory.msgpack"),
         )
-
-        production_future["msgpack_trajectory"] = tmp_path / "new.msgpack"
 
     else:
         # this case is a dummy test for the reproducibility of the Jacobian computation;
@@ -179,8 +177,8 @@ def test_swapping_molecule_order_same_jacobian_values(production_future, tmp_pat
         reference_force_field_path=tmp_path / "ref.ff.json",
     )
 
-    # these don't come out to be equal when swapping molecules - I don't think they should be?
-    assert (reference_averages != new_averages) == swap_molecules
+    # averages should be independent of molecule ordering
+    assert reference_averages == new_averages
 
     assert reference_jacobians.shape == new_jacobians.shape
 
@@ -189,8 +187,6 @@ def test_swapping_molecule_order_same_jacobian_values(production_future, tmp_pat
     # >       torch.testing.assert_close(reference_jacobians, new_jacobians)
     # E       AssertionError: Tensor-likes are not close!
     # E
-    # E       Mismatched elements: 544 / 592 (91.9%)
-    # E       Greatest absolute difference: 1.9144745927413596e+18 at index (6, 51) (up to 1e-07 allowed)
-    # E       Greatest relative difference: inf at index (2, 69) (up to 1e-07 allowed)
-
-    # tyff/_tests/compute/test_jacobians.py:118: AssertionError
+    # E       Mismatched elements: 87 / 592 (14.7%)
+    # E       Greatest absolute difference: 110612.0 at index (3, 21) (up to 1e-07 allowed)
+    # E       Greatest relative difference: 0.008264456017578518 at index (2, 21) (up to 1e-07 allowed)
