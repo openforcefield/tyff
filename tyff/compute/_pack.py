@@ -22,7 +22,8 @@ def _prepare_packed_topology(
 
     logger.info("packing topology")
 
-    compute_config = json.load(open(f"{job_dir}/compute_config.json"))
+    with open(f"{job_dir}/compute_config.json") as f:
+        compute_config = json.load(f)
 
     files = PackingFiles(
         packed_topology=File(f"{job_dir}/packed_topology.pdb"),
