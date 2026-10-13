@@ -29,6 +29,7 @@ from tyff.targets.thermo import (
 @pytest.fixture
 def mock_density_pure() -> DataEntry:
     return {
+        "id": None,
         "tag": "density",
         "smiles": ["CO"],
         "x": [1.0],
@@ -44,6 +45,7 @@ def mock_density_pure() -> DataEntry:
 @pytest.fixture
 def mock_density_binary() -> DataEntry:
     return {
+        "id": None,
         "tag": "density",
         "smiles": ["CCO", "CO"],
         "x": [0.5, 0.5],
@@ -622,6 +624,7 @@ def test_create_from_evaluator(data_dir):
 
     entries = list(tyff.utils.dataset.iter_dataset(dataset))
     expected = {
+        "id": None,
         "smiles": [
             "[C:1]([C:2]([O:3][H:9])([H:7])[H:8])([H:4])([H:5])[H:6]",
             "[O:1]([H:2])[H:3]",

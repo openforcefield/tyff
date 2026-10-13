@@ -22,7 +22,6 @@ import tyff.utils
 import tyff.utils.dataset
 import tyff.utils.loss
 import tyff.utils.molecule
-from tyff.molecule import map_smiles
 
 if typing.TYPE_CHECKING:
     import tyff.train
@@ -64,7 +63,7 @@ PHASES = typing.get_args(Phase)
 class DataEntry(typing.TypedDict):
     """Represents a single experimental data point."""
 
-    id: int
+    id: str
     """
     A unique identifier for the data point, hook up to _get_raw_property_hash for physical property data.
     """
@@ -141,12 +140,12 @@ class _Observables(typing.NamedTuple):
 _SystemDict = dict[SimulationKey, tyff.TensorSystem]
 
 
-def create_dataset(entries: list[DataEntry]) -> datasets.Dataset:
+def create_dataset(*entries: DataEntry) -> datasets.Dataset:
 
     copied_entries = [copy.deepcopy(entry) for entry in entries]
 
     for copied_entry in copied_entries:
-        copied_entry["smiles"] = [map_smiles(value) for value in copied_entry["smiles"]]
+        copied_entry["smiles"] = [tyff.utils.molecule.map_smiles(value) for value in copied_entry["smiles"]]
 
     # could roundtrip through DataEntry here as a form of validation
 
