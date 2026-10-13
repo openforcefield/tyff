@@ -10,21 +10,12 @@ repos:
       exclude: '\.(json)$'
     - id: debug-statements
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.17.0
+  rev: v0.16.9
   hooks:
     - id: ruff-check
       args: ["--fix"]
     - id: ruff-format
 - repo: https://github.com/tox-dev/pyproject-fmt
-  rev: v2.30.3
+  rev: v2.29.4
   hooks:
     - id: pyproject-fmt
-- repo: https://github.com/tombi-toml/tombi-pre-commit
-  rev: v1.8.2
-  hooks:
-    - id: tombi-format
-      args: ["--offline"]
-      files: 'pixi.toml'
-    - id: tombi-lint
-      args: ["--offline"]
-      files: 'pixi.toml'
