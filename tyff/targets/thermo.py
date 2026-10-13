@@ -1,6 +1,7 @@
 """Train against thermodynamic properties."""
 
 import contextlib
+import copy
 import hashlib
 import logging
 import pathlib
@@ -21,6 +22,7 @@ import tyff.utils
 import tyff.utils.dataset
 import tyff.utils.loss
 import tyff.utils.molecule
+from tyff.molecule import map_smiles
 
 if typing.TYPE_CHECKING:
     import tyff.train
@@ -35,6 +37,7 @@ DATA_TYPES = typing.get_args(DataType)
 
 DATA_SCHEMA = pyarrow.schema(
     [
+        ("id", pyarrow.string()),
         ("tag", pyarrow.string()),
         ("smiles", pyarrow.list_(pyarrow.string())),
         ("x", pyarrow.list_(pyarrow.float64())),
@@ -60,6 +63,11 @@ PHASES = typing.get_args(Phase)
 
 class DataEntry(typing.TypedDict):
     """Represents a single experimental data point."""
+
+    id: int
+    """
+    A unique identifier for the data point, hook up to _get_raw_property_hash for physical property data.
+    """
 
     tag: DataType
     """The type of data point."""
@@ -133,24 +141,18 @@ class _Observables(typing.NamedTuple):
 _SystemDict = dict[SimulationKey, tyff.TensorSystem]
 
 
-def create_dataset(*rows: DataEntry) -> datasets.Dataset:
-    """Create a dataset from a list of existing data points.
+def create_dataset(entries: list[DataEntry]) -> datasets.Dataset:
 
-    Args:
-        rows: The data points to create the dataset from.
+    copied_entries = [copy.deepcopy(entry) for entry in entries]
 
-    Returns:
-        The created dataset.
-    """
+    for copied_entry in copied_entries:
+        copied_entry["smiles"] = [map_smiles(value) for value in copied_entry["smiles"]]
 
-    for row in rows:
-        row["smiles"] = [tyff.utils.molecule.map_smiles(smiles) for smiles in row["smiles"]]
+    # could roundtrip through DataEntry here as a form of validation
 
-    # TODO: validate rows
-    table = pyarrow.Table.from_pylist([*rows], schema=DATA_SCHEMA)
+    table = pyarrow.Table.from_pylist([*copied_entries], schema=DATA_SCHEMA)
 
-    dataset = datasets.Dataset(datasets.table.InMemoryTable(table))
-    return dataset
+    return datasets.Dataset(datasets.table.InMemoryTable(table))
 
 
 def create_from_evaluator(dataset_file: pathlib.Path) -> datasets.Dataset:
