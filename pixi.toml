@@ -25,7 +25,6 @@ datasets = "4.*"  # can probably remove when pyarrow >20
 
 [pypi-dependencies]
 pydantic = "*"
-datasets = "*"
 pyyaml = "*"
 numpy = "*"
 setuptools_scm = "*"
