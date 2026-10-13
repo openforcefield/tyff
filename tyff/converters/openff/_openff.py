@@ -323,7 +323,7 @@ def convert_handlers(
 
     if len(depends_on) > 0:
         missing_deps = {dep for dep in depends_on if dep not in potentials_by_type}
-        assert len(missing_deps) == 0, "missing dependencies"
+        assert len(missing_deps) == 0, f"missing dependencies: {missing_deps}"
 
         dependencies = {dep: potentials_by_type[dep] for dep in depends_on}
         assert "dependencies" in converter_spec.parameters, "dependencies not accepted"
