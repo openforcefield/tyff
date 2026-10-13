@@ -313,7 +313,8 @@ def _add_parameters_to_vdw_with_lookup(
 
         if not (assignment_dense.abs().sum(axis=-1) == 1).all():
             raise NotImplementedError(
-                f"exceptions can only be used when each particle is assigned exactly one {potential.handler_type} parameter"
+                "exceptions can only be used when each particle is assigned exactly one "
+                f"{potential.handler_type} parameter"
             )
 
         for _ in range(n_copies):
