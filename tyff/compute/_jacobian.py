@@ -21,8 +21,8 @@ def _gather_from_reference(local: tyff.TensorForceField, reference: tyff.TensorF
     potentials = []
 
     for potential in local.potentials:
-        ref = reference_by_type[potential.type]  # KeyError: potential type missing from reference
-        assert potential.parameter_cols == ref.parameter_cols, potential.type
+        ref = reference_by_type[potential.handler_type]  # KeyError: potential type missing from reference
+        assert potential.parameter_cols == ref.parameter_cols, potential.handler_type
 
         ref_idx = {key: i for i, key in enumerate(ref.parameter_keys)}
         idx = torch.tensor([ref_idx[key] for key in potential.parameter_keys])  # KeyError: unseen parameter
