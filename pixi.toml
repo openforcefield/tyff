@@ -21,9 +21,11 @@ pyarrow = "20.*"
 bokeh = "3.9.*"
 filelock = "<4"  # parsl stuck on 3.x
 sqlalchemy = ">=2.0.14,<2.1.0"
+datasets = "4.*"  # can probably remove when pyarrow >20
 
 [pypi-dependencies]
 pydantic = "*"
+datasets = "*"
 pyyaml = "*"
 numpy = "*"
 setuptools_scm = "*"
