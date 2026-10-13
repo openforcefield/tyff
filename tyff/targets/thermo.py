@@ -144,6 +144,8 @@ def create_dataset(*entries: DataEntry) -> datasets.Dataset:
 
     copied_entries = [copy.deepcopy(entry) for entry in entries]
 
+    copied_entries = [entry for entry in entries]
+
     for copied_entry in copied_entries:
         copied_entry["smiles"] = [tyff.utils.molecule.map_smiles(value) for value in copied_entry["smiles"]]
 

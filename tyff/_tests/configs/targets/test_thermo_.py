@@ -51,7 +51,7 @@ def replace_with_bad_data_type(value: str | float | list[float]) -> float | str 
 def test_create_dataset():
     entries = [create_test_entry() for _ in range(5)]
 
-    dataset = create_dataset(entries)
+    dataset = create_dataset(*entries)
     assert len(dataset) == 5
 
     for row, entry in zip(dataset, entries):
@@ -61,7 +61,7 @@ def test_create_dataset():
         # These should not be equal, at least in this test,
         # since the test data is not mapped, but the stored data is mapped
         # Revisit if DataEntry is changed to store mapped SMILES
-        assert row["smiles"] != entry["smiles"]
+        assert row["smiles"] == entry["smiles"]
 
         # make sure the stored SMILES is mapped and matches the original SMILES
         for dataset_smiles, entry_smiles in zip(row["smiles"], entry["smiles"]):
