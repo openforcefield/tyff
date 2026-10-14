@@ -140,33 +140,22 @@ def predict(
     force_field: tyff.TensorForceField,
     job_ids: list[str],
     base_dir: str,
-):
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     attached_means = load_remote_observables(force_field, base_dir, job_ids)
 
     means_and_stds: list[dict[str, torch.Tensor]] = compute_properties(dataset, attached_means)
 
-    # return list of 4-long tuples or 4 tuples of list-likes?
+    ref_values = [entry["value"] for entry in dataset]
+    ref_stds = [entry["std"] for entry in dataset]
+    predicted_values = [mean["density"] for mean, _ in means_and_stds]
+    predicted_stds = [std["density"] for _, std in means_and_stds]
 
-    return_values: list[tuple[float, float, float, float]] = list()
-    # putting a lot of trust in ordering here (and I guess everywhere?)
+    ref_values = torch.tensor(ref_values)
+    ref_stds = torch.tensor(ref_stds)
+    predicted_values = torch.tensor(predicted_values)
+    predicted_stds = torch.tensor(predicted_stds)
 
-    for reference, predicted in zip(dataset, means_and_stds):
-        return_values.append(
-            (
-                (
-                    reference["value"],
-                    reference["std"],
-                    predicted[0],
-                    predicted[1],
-                )
-            ),
-        )
-
-    # unwrap list of 4-long tuples to 4 separate tuples?
-    return return_values
-    # can either just return means_and_stds or can reformat into
-    # returning (ref_values, ref_stds, predicted_values, predicted_std)
-    # like other targets - reference values can be taken straight from DataEntrys
+    return ref_values, ref_stds, predicted_values, predicted_stds
 
 
 if __name__ == "__main__":
