@@ -232,17 +232,8 @@ def extract_smiles(dataset: datasets.Dataset) -> list[str]:
     Returns:
         The unique SMILES strings with full atom mapping.
     """
-    return_set = set()
-
-    def map_function(batch):
-        for row in batch["smiles"]:
-            return_set.update(row)
-        return batch
-
-    # Update the set chunk by chunk
-    dataset.map(map_function, batched=True)
-
-    return sorted(return_set)
+    # TODO: This is potentially slow for larger datasets
+    return sorted(set([val for row in dataset["smiles"] for val in row]))
 
 
 def _convert_entry_to_system(

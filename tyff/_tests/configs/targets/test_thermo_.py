@@ -58,9 +58,9 @@ def test_create_dataset():
         assert row["id"] == entry["id"]
         assert row["tag"] == entry["tag"]
 
-        # These should not be equal, at least in this test,
-        # since the test data is not mapped, but the stored data is mapped
-        # Revisit if DataEntry is changed to store mapped SMILES
+        # See Issue #189: https://github.com/openforcefield/tyff/issues/189
+        # If we leave the side-effect in, these should be equal. If we change
+        # it to not have this side-effect, this will need to be updated to !=
         assert row["smiles"] == entry["smiles"]
 
         # make sure the stored SMILES is mapped and matches the original SMILES
