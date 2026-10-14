@@ -115,8 +115,6 @@ def compute_properties(
                 for key in types_of_observables
             }
 
-            means_and_stds.append((mean, std))
-
             # figure out which job id/s (if multiple replicas) in the observable corresponds to
             # and calculate means and stds
         elif entry["tag"] == "dielectric_constant":
@@ -145,9 +143,27 @@ def predict(
 ):
     attached_means = load_remote_observables(force_field, base_dir, job_ids)
 
-    means_and_stds = compute_properties(dataset, attached_means)
+    means_and_stds: list[dict[str, torch.Tensor]] = compute_properties(dataset, attached_means)
 
-    return means_and_stds
+    # return list of 4-long tuples or 4 tuples of list-likes?
+
+    return_values: list[tuple[float, float, float, float]] = list()
+    # putting a lot of trust in ordering here (and I guess everywhere?)
+
+    for reference, predicted in zip(dataset, means_and_stds):
+        return_values.append(
+            (
+                (
+                    reference["value"],
+                    reference["std"],
+                    predicted[0],
+                    predicted[1],
+                )
+            ),
+        )
+
+    # unwrap list of 4-long tuples to 4 separate tuples?
+    return return_values
     # can either just return means_and_stds or can reformat into
     # returning (ref_values, ref_stds, predicted_values, predicted_std)
     # like other targets - reference values can be taken straight from DataEntrys
