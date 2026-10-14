@@ -257,7 +257,7 @@ class TensorSystem:
 class TensorPotential:
     """A tensor representation of a valence SMIRNOFF parameter handler"""
 
-    type: str
+    handler_type: str
     """The type of handler associated with these parameters"""
     fn: str
     """The associated potential energy function"""
@@ -297,7 +297,7 @@ class TensorPotential:
     def to(self, device: DeviceType | None = None, precision: Precision | None = None) -> "TensorPotential":
         """Cast this object to the specified device."""
         return TensorPotential(
-            self.type,
+            self.handler_type,
             self.fn,
             _cast(self.parameters, device, precision),
             self.parameter_keys,
@@ -361,7 +361,7 @@ class TensorForceField:
 
     @property
     def potentials_by_type(self) -> dict[str, TensorPotential]:
-        potentials = {potential.type: potential for potential in self.potentials}
+        potentials = {potential.handler_type: potential for potential in self.potentials}
         assert len(potentials) == len(self.potentials), "duplicate potentials found"
 
         return potentials

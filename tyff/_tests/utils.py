@@ -211,7 +211,7 @@ def add_explicit_lb_exceptions(potential: tyff.TensorPotential, system: tyff.Ten
         system: The system whose assignment matrices need to be updated to account for
             the new exception parameters.
     """
-    assert potential.type == "vdW"
+    assert potential.handler_type == "vdW"
 
     n_params = len(potential.parameters)
 

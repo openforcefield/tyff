@@ -25,13 +25,13 @@ def convert_tensor_force_field(
     updated = copy.deepcopy(original_force_field)
 
     for potential in tensor_force_field.potentials:
-        if potential.type in ("Electrostatics",):
+        if potential.handler_type in ("Electrostatics",):
             continue
 
-        if potential.type in ("VirtualSites",):
+        if potential.handler_type in ("VirtualSites",):
             raise NotImplementedError("Virtual site parameters are not yet supported.")
 
-        name = str(getattr(potential.type, "value", potential.type))
+        name = str(getattr(potential.handler_type, "value", potential.handler_type))
         handler = updated.get_parameter_handler(name)
 
         for row, key in enumerate(potential.parameter_keys):

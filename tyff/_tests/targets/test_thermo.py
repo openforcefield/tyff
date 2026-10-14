@@ -24,16 +24,16 @@ from tyff.targets.thermo import (
     predict,
     select_config,
 )
+from tyff.utils.molecule import map_smiles
 
 
 @pytest.fixture
 def mock_density_pure() -> DataEntry:
     return {
-        "type": "density",
-        "smiles_a": "CO",
-        "x_a": 1.0,
-        "smiles_b": None,
-        "x_b": None,
+        "id": None,
+        "tag": "density",
+        "smiles": [map_smiles(smiles) for smiles in ["CO"]],
+        "x": [1.0],
         "temperature": 298.15,
         "pressure": 1.0,
         "value": 0.785,
@@ -46,11 +46,10 @@ def mock_density_pure() -> DataEntry:
 @pytest.fixture
 def mock_density_binary() -> DataEntry:
     return {
-        "type": "density",
-        "smiles_a": "CCO",
-        "x_a": 0.5,
-        "smiles_b": "CO",
-        "x_b": 0.5,
+        "id": None,
+        "tag": "density",
+        "smiles": [map_smiles(smiles) for smiles in ["CCO", "CO"]],
+        "x": [0.5, 0.5],
         "temperature": 298.15,
         "pressure": 1.0,
         "value": 0.9,
@@ -63,11 +62,9 @@ def mock_density_binary() -> DataEntry:
 @pytest.fixture
 def mock_hvap() -> DataEntry:
     return {
-        "type": "hvap",
-        "smiles_a": "CCCC",
-        "x_a": 1.0,
-        "smiles_b": None,
-        "x_b": None,
+        "tag": "hvap",
+        "smiles": [map_smiles(smiles) for smiles in ["CCCC"]],
+        "x": [1.0],
         "temperature": 298.15,
         "pressure": 1.0,
         "value": 1.234,
@@ -80,11 +77,9 @@ def mock_hvap() -> DataEntry:
 @pytest.fixture
 def mock_hmix() -> DataEntry:
     return {
-        "type": "hmix",
-        "smiles_a": "CCO",
-        "x_a": 0.5,
-        "smiles_b": "CO",
-        "x_b": 0.5,
+        "tag": "hmix",
+        "smiles": [map_smiles(smiles) for smiles in ["CCO", "CO"]],
+        "x": [0.5, 0.5],
         "temperature": 298.15,
         "pressure": 1.0,
         "value": 0.4321,
@@ -118,14 +113,14 @@ def test_extract_smiles(mock_density_pure, mock_density_binary):
 
 def test_convert_entry_to_system_pure(mock_density_pure, mocker):
     topology = mocker.Mock()
-    topologies = {"CO": topology}
+    topologies = {map_smiles("CO"): topology}
 
     n_mols = 123
 
     key, system = _convert_entry_to_system(mock_density_pure, topologies, n_mols)
 
     assert key == (
-        ("CO",),
+        (map_smiles("CO"),),
         (123,),
         mock_density_pure["temperature"],
         mock_density_pure["pressure"],
@@ -139,14 +134,14 @@ def test_convert_entry_to_system_pure(mock_density_pure, mocker):
 def test_convert_entry_to_system_binary(mock_density_binary, mocker):
     topology_a = mocker.Mock()
     topology_b = mocker.Mock()
-    topologies = {"CO": topology_a, "CCO": topology_b}
+    topologies = {map_smiles("CO"): topology_a, map_smiles("CCO"): topology_b}
 
     n_mols = 128
 
     key, system = _convert_entry_to_system(mock_density_binary, topologies, n_mols)
 
     assert key == (
-        ("CCO", "CO"),
+        (map_smiles("CCO"), map_smiles("CO")),
         (n_mols // 2, n_mols // 2),
         mock_density_binary["temperature"],
         mock_density_binary["pressure"],
@@ -228,7 +223,11 @@ def test_plan_simulations(mock_density_pure, mock_density_binary, mock_hvap, moc
     topology_cco = mocker.Mock()
     topology_cccc = mocker.Mock()
 
-    topologies = {"CO": topology_co, "CCO": topology_cco, "CCCC": topology_cccc}
+    topologies = {
+        map_smiles("CO"): topology_co,
+        map_smiles("CCO"): topology_cco,
+        map_smiles("CCCC"): topology_cccc,
+    }
 
     # some mock config
     custom_config = {
@@ -254,31 +253,31 @@ def test_plan_simulations(mock_density_pure, mock_density_binary, mock_hvap, moc
 
     assert sorted(required_simulations) == ["bulk", "vacuum"]
 
-    expected_vacuum_key = SimulationKey(("CCCC",), (1,), mock_hvap["temperature"], None)
+    expected_vacuum_key = SimulationKey((map_smiles("CCCC"),), (1,), mock_hvap["temperature"], None)
     assert sorted(required_simulations["vacuum"]) == [expected_vacuum_key]
     assert required_simulations["vacuum"][expected_vacuum_key].n_copies == [1]
     assert required_simulations["vacuum"][expected_vacuum_key].topologies == [topology_cccc]
 
     expected_cccc_key = SimulationKey(
-        ("CCCC",),
+        (map_smiles("CCCC"),),
         (max_mols,),
         mock_hvap["temperature"],
         mock_hvap["pressure"],
     )
     expected_co_key = SimulationKey(
-        ("CO",),
+        (map_smiles("CO"),),
         (max_mols,),
         mock_density_pure["temperature"],
         mock_density_pure["pressure"],
     )
     expected_cco_key = SimulationKey(
-        ("CCO",),
+        (map_smiles("CCO"),),
         (max_mols,),
         mock_density_binary["temperature"],
         mock_density_binary["pressure"],
     )
     expected_cco_co_key = SimulationKey(
-        ("CCO", "CO"),
+        (map_smiles("CCO"), map_smiles("CO")),
         (max_mols / 2, max_mols / 2),
         mock_density_binary["temperature"],
         mock_density_binary["pressure"],
@@ -381,7 +380,7 @@ def test_compute_observables_reweighted(tmp_cwd, mocker):
     mocker.patch("hashlib.sha256", autospec=True, return_value=mock_hash)
 
     phase = "vacuum"
-    key = SimulationKey(("CCCC",), (1,), 298.15, None)
+    key = SimulationKey((map_smiles("CCCC"),), (1,), 298.15, None)
 
     mock_system = mocker.Mock()
     mock_ff = mocker.Mock()
@@ -417,7 +416,7 @@ def test_compute_observables_simulated(tmp_cwd, mocker):
     mocker.patch("hashlib.sha256", autospec=True, return_value=mock_hash)
 
     phase = "vacuum"
-    key = SimulationKey(("CCCC",), (1,), 298.15, None)
+    key = SimulationKey((map_smiles("CCCC"),), (1,), 298.15, None)
 
     mock_system = mocker.Mock()
     mock_ff = mocker.Mock()
@@ -437,7 +436,7 @@ def test_compute_observables_simulated(tmp_cwd, mocker):
 
 
 def test_predict_density(mock_density_pure, mocker):
-    topologies = {"CO": mocker.Mock()}
+    topologies = {map_smiles("CO"): mocker.Mock()}
     key, system = _convert_entry_to_system(mock_density_pure, topologies, 123)
 
     expected_result = torch.randn(1)
@@ -452,14 +451,14 @@ def test_predict_density(mock_density_pure, mocker):
 
 
 def test_predict_hvap(mock_hvap, mocker):
-    topologies = {"CCCC": mocker.Mock()}
+    topologies = {map_smiles("CCCC"): mocker.Mock()}
 
     n_mols = 123
 
     key_bulk, system_bulk = _convert_entry_to_system(mock_hvap, topologies, n_mols)
-    key_vaccum = SimulationKey(("CCCC",), (1,), mock_hvap["temperature"], None)
+    key_vaccum = SimulationKey((map_smiles("CCCC"),), (1,), mock_hvap["temperature"], None)
 
-    system_vacuum = tyff.TensorSystem([topologies["CCCC"]], [1], False)
+    system_vacuum = tyff.TensorSystem([topologies[map_smiles("CCCC")]], [1], False)
 
     potential_bulk = torch.tensor([7.0])
     potential_bulk_std = torch.randn(1).abs()
@@ -500,16 +499,16 @@ def test_predict_hvap(mock_hvap, mocker):
 
 
 def test_predict_hmix(mock_hmix, mocker):
-    topologies = {"CO": mocker.Mock(), "CCO": mocker.Mock()}
+    topologies = {map_smiles("CO"): mocker.Mock(), map_smiles("CCO"): mocker.Mock()}
 
     n_mols = 100
 
     key_bulk, system_bulk = _convert_entry_to_system(mock_hmix, topologies, n_mols)
-    key_0 = SimulationKey(("CCO",), (n_mols,), mock_hmix["temperature"], mock_hmix["pressure"])
-    key_1 = SimulationKey(("CO",), (n_mols,), mock_hmix["temperature"], mock_hmix["pressure"])
+    key_0 = SimulationKey((map_smiles("CCO"),), (n_mols,), mock_hmix["temperature"], mock_hmix["pressure"])
+    key_1 = SimulationKey((map_smiles("CO"),), (n_mols,), mock_hmix["temperature"], mock_hmix["pressure"])
 
-    system_0 = tyff.TensorSystem([topologies["CCO"]], [n_mols], False)
-    system_1 = tyff.TensorSystem([topologies["CO"]], [n_mols], False)
+    system_0 = tyff.TensorSystem([topologies[map_smiles("CCO")]], [n_mols], False)
+    system_1 = tyff.TensorSystem([topologies[map_smiles("CO")]], [n_mols], False)
 
     enthalpy_bulk = torch.tensor([16.0])
     enthalpy_bulk_std = torch.randn(1).abs()
@@ -611,7 +610,7 @@ def test_default_closure(tmp_cwd, mock_density_pure, mocker):
         autospec=True,
         return_value=(mock_y_ref, None, mock_y_pred, None),
     )
-    mock_topologies = {mock_density_pure["smiles_a"]: mocker.MagicMock()}
+    mock_topologies = {mock_density_pure["smiles"][0]: mocker.MagicMock()}
     mock_trainable = mocker.MagicMock()
 
     closure_fn = default_closure(mock_trainable, mock_topologies, dataset, None)
@@ -630,17 +629,22 @@ def test_create_from_evaluator(data_dir):
 
     entries = list(tyff.utils.dataset.iter_dataset(dataset))
     expected = {
-        "smiles_a": "[C:1]([C:2]([O:3][H:9])([H:7])[H:8])([H:4])([H:5])[H:6]",
-        "x_a": 0.48268,
-        "smiles_b": "[O:1]([H:2])[H:3]",
-        "x_b": 0.51732,
+        "id": None,
+        "smiles": [
+            "[C:1]([C:2]([O:3][H:9])([H:7])[H:8])([H:4])([H:5])[H:6]",
+            "[O:1]([H:2])[H:3]",
+        ],
+        "x": [
+            0.48268,
+            0.51732,
+        ],
         "temperature": 298.15,
         "pressure": 101.3,
         "value": 0.99,
         "std": 0.000505,
         "units": "g/mL",
         "source": "mock",
-        "type": "density",
+        "tag": "density",
     }
     assert entries[0] == expected
 

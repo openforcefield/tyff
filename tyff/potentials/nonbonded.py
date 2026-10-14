@@ -55,7 +55,7 @@ def _broadcast_exclusions(
     per_topology_exclusion_scales = []
 
     for topology, n_copies in zip(system.topologies, system.n_copies, strict=True):
-        exclusion_idxs = topology.parameters[potential.type].exclusions
+        exclusion_idxs = topology.parameters[potential.handler_type].exclusions
 
         exclusion_offset = idx_offset + tyff.utils.arange_like(n_copies, exclusion_idxs) * topology.n_particles
         idx_offset += n_copies * topology.n_particles
@@ -65,7 +65,7 @@ def _broadcast_exclusions(
 
         exclusion_idxs = exclusion_offset[:, None, None] + exclusion_idxs[None, :, :]
 
-        exclusion_scales = potential.attributes[topology.parameters[potential.type].exclusion_scale_idxs]
+        exclusion_scales = potential.attributes[topology.parameters[potential.handler_type].exclusion_scale_idxs]
         exclusion_scales = torch.broadcast_to(exclusion_scales, (n_copies, *exclusion_scales.shape))
 
         per_topology_exclusion_idxs.append(exclusion_idxs.reshape(-1, 2))
@@ -770,7 +770,7 @@ def _compute_pme_exclusions(system: tyff.TensorSystem, potential: tyff.TensorPot
     max_exclusions = 0
 
     for exclusions, topology in zip(exclusion_templates, system.topologies, strict=True):
-        for i, j in topology.parameters[potential.type].exclusions:
+        for i, j in topology.parameters[potential.handler_type].exclusions:
             exclusions[i].append(int(j))
             exclusions[j].append(int(i))
 

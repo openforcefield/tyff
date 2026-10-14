@@ -156,13 +156,13 @@ def convert_to_openmm_force(potential: tyff.TensorPotential, system: tyff.Tensor
     potential = potential.to("cpu")
     system = system.to("cpu")
 
-    if potential.exceptions is not None and potential.type != "vdW":
+    if potential.exceptions is not None and potential.handler_type != "vdW":
         raise NotImplementedError("exceptions are only supported for vdW potentials")
 
-    converter_key = (str(potential.type), str(potential.fn))
+    converter_key = (str(potential.handler_type), str(potential.fn))
 
     if converter_key not in _CONVERTER_FUNCTIONS:
-        raise NotImplementedError(f"cannot convert type={potential.type} fn={potential.fn} to an OpenMM force")
+        raise NotImplementedError(f"cannot convert type={potential.handler_type} fn={potential.fn} to an OpenMM force")
 
     forces = _CONVERTER_FUNCTIONS[converter_key](potential, system)
     return forces if isinstance(forces, (list, tuple)) else [forces]
