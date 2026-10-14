@@ -2,6 +2,7 @@ import json
 import pathlib
 from collections.abc import Sequence
 
+import datasets
 import torch
 
 import tyff
@@ -10,11 +11,32 @@ from tyff._serialization import load_tensor_force_field
 from tyff.compute.jobs import make_job_id
 from tyff.configs.liquid import BulkLiquid
 from tyff.configs.targets.thermo import DataEntry
+from tyff.targets import energy, thermo
 
 # in leiu of better target-job tracking, just define known argumnets as ~globals
 FORCE_FIELD = "openff-2.3.0.offxml"
 N_MOLECULES = 200
 N_REPLICATES = 3
+
+
+def topologies_for(
+    smiles_list: list[str],
+    tensor_force_field: tyff.TensorForceField,
+) -> dict[str, tyff.TensorTopology]:
+    # surely a more straightforward way to do this?
+    from openff.toolkit import Molecule
+
+    from tyff.converters.openff._tensors import convert_tensor_force_field
+
+    smirnoff_force_field = convert_tensor_force_field(tensor_force_field)
+
+    interchanges = [
+        smirnoff_force_field.create_interchange(Molecule.from_smiles(smiles).to_topology()) for smiles in smiles_list
+    ]
+
+    _, topologies = tyff.converters.convert_interchange(interchanges)
+
+    return {smiles: topology for smiles, topology in zip(smiles_list, topologies)}
 
 
 def load_remote_observables(
@@ -159,6 +181,8 @@ def predict(
 
 
 if __name__ == "__main__":
+    energy_data = datasets.Dataset.load_from_disk("data/energy/")
+    thermo_data = datasets.Dataset.load_from_disk("data/thermo/")
     with open("density_example/thermo_targets/targets.json") as f:
         targets = json.load(f)
 
@@ -166,6 +190,11 @@ if __name__ == "__main__":
         "density_example/reference_force_fields/openff-2.3.0.offxml.json",
     ) as f:
         global_force_field = load_tensor_force_field(json.load(f))
+
+    topologies_dict = topologies_for(
+        list({*thermo.extract_smiles(thermo_data), *energy.extract_smiles(energy_data)}),
+        global_force_field,
+    )
 
     predict(
         dataset=targets,
@@ -189,3 +218,10 @@ if __name__ == "__main__":
 
     # TODO: Would be nice to dummy-check .backwards, can do this by constructing
     # a minimal loss function of (predicted - expected) for each density value
+
+    energy_ref, energy_pred, forces_ref, forces_pred = energy.predict(
+        energy_data,
+        global_force_field,
+        topologies_dict,
+        normalize=False,
+    )
