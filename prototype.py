@@ -23,12 +23,15 @@ def topologies_for(
     smiles_list: list[str],
     tensor_force_field: tyff.TensorForceField,
 ) -> dict[str, tyff.TensorTopology]:
-    # surely a more straightforward way to do this?
-    from openff.toolkit import Molecule
+    # surely there is a more straightforward way to do this?
+    from openff.toolkit import ForceField, Molecule
 
     from tyff.converters.openff._tensors import convert_tensor_force_field
 
-    smirnoff_force_field = convert_tensor_force_field(tensor_force_field)
+    smirnoff_force_field = convert_tensor_force_field(
+        ForceField(FORCE_FIELD),
+        tensor_force_field,
+    )
 
     interchanges = [
         smirnoff_force_field.create_interchange(Molecule.from_smiles(smiles).to_topology()) for smiles in smiles_list
