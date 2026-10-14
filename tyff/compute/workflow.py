@@ -127,6 +127,20 @@ class SimulationWorkflow:
 
         from tyff._serialization import dump_tensor_force_field
 
+        # save these targets since they're probably going to be needed later
+        (pathlib.Path(self.base_dir) / "thermo_targets").mkdir(exist_ok=True)
+
+        if (pathlib.Path(self.base_dir) / "thermo_targets" / "targets.json").exists():
+            with open(pathlib.Path(self.base_dir) / "thermo_targets" / "targets.json") as f:
+                targets = json.load(f)
+        else:
+            targets = list()
+
+        targets.extend(target_configs)
+
+        with open(pathlib.Path(self.base_dir) / "thermo_targets" / "targets.json", "w") as f:
+            json.dump(targets, f, indent=4)
+
         unique_smiles = set()
 
         for target in target_configs:
@@ -157,7 +171,11 @@ class SimulationWorkflow:
 
         # dumps a JSON representation of the tensor representation of the SMIRNOFF force field
         with open(self._reference_force_fields / f"{force_field}.json", "w") as f:
-            json.dump(dump_tensor_force_field(reference_force_field), f)
+            json.dump(
+                dump_tensor_force_field(reference_force_field),
+                f,
+                indent=4,
+            )
 
         return [
             result
