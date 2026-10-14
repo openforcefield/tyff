@@ -3,7 +3,6 @@ import pathlib
 from collections.abc import Sequence
 
 import torch
-from rich import print
 
 import tyff
 import tyff.converters
@@ -33,6 +32,7 @@ def load_remote_observables(
         [t.reshape(-1) for t in tensors if t is not None]
     )  # has to be flat, and not a tuple
 
+    # TODO: Move this class to not be inside of this function
     class RemoteEnsembleAverage(torch.autograd.Function):
         @staticmethod
         def forward(
@@ -76,15 +76,16 @@ def load_remote_observables(
 
         job_id_to_observables[job_id] = dict(zip(names, attached_means))
 
-    print(job_id_to_observables)
-
     return job_id_to_observables
 
 
-def compute_properties(dataset: Sequence[DataEntry], observables):
+def compute_properties(
+    dataset: Sequence[DataEntry],
+    observables: dict[str, dict[str, torch.Tensor]],
+) -> list[tuple[dict, dict]]:
     from tyff.compute.prep import _compute_configs_from_data_entry
 
-    means_and_stds = []
+    means_and_stds: list[tuple[dict, dict]] = list()
 
     for entry in dataset:
         if entry["tag"] == "density":
@@ -102,61 +103,9 @@ def compute_properties(dataset: Sequence[DataEntry], observables):
             job_ids = [make_job_id(replicate[0]) for replicate in compute_configs]
 
             types_of_observables = [*observables[job_ids[0]].keys()]
-            """
-            ipdb> entry
-            {
-                'id': 74669191270958899039426367776551206167278900382279422138348522811937124722445,
-                'tag': 'density',
-                'smiles': ['COCCO'],
-                'x': [1.0],
-                'temperature': 293.15,
-                'pressure': 101.3,
-                'value': 0.9648800000000002,
-                'std': 5.0000000000000016e-05,
-                'units': 'gram / milliliter',
-                'source': ''
-            }
-            ipdb> job_ids
-            [
-                '5090adac8840d612600a2542c0236d47c2de3cdef6d6517961aa68e84f7ab8da',
-                '2ed40b18f3773e1a0eb756147e2b56e3da4c47149cdbf97c7bf6b85107df5c1c',
-                '86cf94ed4a70093ce9d6d1f480eebaf806c457ca1c7347e5b2f153e59f12d59e'
-            ]
-            ipdb> print([observables[job_id] for job_id in job_ids])
-            [
-                {
-                    'potential_energy': tensor(1835.6803, dtype=torch.float64),
-                    'potential_energy^2': tensor(3371036.2500, dtype=torch.float64),
-                    'volume': tensor(26207.9766, dtype=torch.float64),
-                    'volume^2': tensor(6.8692e+08, dtype=torch.float64),
-                    'density': tensor(0.9644, dtype=torch.float64),
-                    'enthalpy': tensor(3684.1626, dtype=torch.float64),
-                    'enthalpy^2': tensor(13574647., dtype=torch.float64),
-                    'enthalpy_volume': tensor(96557640., dtype=torch.float64)
-                },
-                {
-                    'potential_energy': tensor(1848.0491, dtype=torch.float64),
-                    'potential_energy^2': tensor(3417077., dtype=torch.float64),
-                    'volume': tensor(26305.6504, dtype=torch.float64),
-                    'volume^2': tensor(6.9209e+08, dtype=torch.float64),
-                    'density': tensor(0.9608, dtype=torch.float64),
-                    'enthalpy': tensor(3695.4373, dtype=torch.float64),
-                    'enthalpy^2': tensor(13658783., dtype=torch.float64),
-                    'enthalpy_volume': tensor(97218952., dtype=torch.float64)
-                },
-                {
-                    'potential_energy': tensor(1837.3766, dtype=torch.float64),
-                    'potential_energy^2': tensor(3377881.2500, dtype=torch.float64),
-                    'volume': tensor(26262.2070, dtype=torch.float64),
-                    'volume^2': tensor(6.8976e+08, dtype=torch.float64),
-                    'density': tensor(0.9624, dtype=torch.float64),
-                    'enthalpy': tensor(3681.6003, dtype=torch.float64),
-                    'enthalpy^2': tensor(13557029., dtype=torch.float64),
-                    'enthalpy_volume': tensor(96692128., dtype=torch.float64)
-                }
-            ]
-            """
-            # do we just return the mean and std for each observable this list?
+
+            # could be simpler to return these as 1-D tensors - make sure to sort
+            # keys to avoid ordering issues
             mean = {
                 key: torch.stack([observables[job_id][key] for job_id in job_ids]).mean()
                 for key in types_of_observables
@@ -166,32 +115,7 @@ def compute_properties(dataset: Sequence[DataEntry], observables):
                 for key in types_of_observables
             }
 
-            """
-            not sure if these are the right things to return?
-
-            ipdb> print(mean)
-            {
-                'potential_energy': tensor(1840.3687, dtype=torch.float64),
-                'potential_energy^2': tensor(3388664.8333, dtype=torch.float64),
-                'volume': tensor(26258.6113, dtype=torch.float64),
-                'volume^2': tensor(6.8959e+08, dtype=torch.float64),
-                'density': tensor(0.9625, dtype=torch.float64),
-                'enthalpy': tensor(3687.0667, dtype=torch.float64),
-                'enthalpy^2': tensor(13596819.6667, dtype=torch.float64),
-                'enthalpy_volume': tensor(96822906.6667, dtype=torch.float64)
-            }
-            ipdb> print(std)
-            {
-                'potential_energy': tensor(6.7053, dtype=torch.float64),
-                'potential_energy^2': tensor(24842.5425, dtype=torch.float64),
-                'volume': tensor(48.9361, dtype=torch.float64),
-                'volume^2': tensor(2586491.9573, dtype=torch.float64),
-                'density': tensor(0.0018, dtype=torch.float64),
-                'enthalpy': tensor(7.3614, dtype=torch.float64),
-                'enthalpy^2': tensor(54380.0468, dtype=torch.float64),
-                'enthalpy_volume': tensor(349514.9283, dtype=torch.float64)
-            }
-            """
+            means_and_stds.append((mean, std))
 
             # figure out which job id/s (if multiple replicas) in the observable corresponds to
             # and calculate means and stds
@@ -226,7 +150,7 @@ def predict(
     return means_and_stds
     # can either just return means_and_stds or can reformat into
     # returning (ref_values, ref_stds, predicted_values, predicted_std)
-    # like other targets
+    # like other targets - reference values can be taken straight from DataEntrys
 
 
 if __name__ == "__main__":
@@ -257,3 +181,6 @@ if __name__ == "__main__":
         ],
         base_dir="density_example",
     )
+
+    # TODO: Would be nice to dummy-check .backwards, can do this by constructing
+    # a minimal loss function of (predicted - expected) for each density value
