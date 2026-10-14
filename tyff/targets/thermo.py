@@ -141,7 +141,14 @@ _SystemDict = dict[SimulationKey, tyff.TensorSystem]
 
 
 def create_dataset(*entries: DataEntry) -> datasets.Dataset:
+    """Create a dataset from a list of existing data points.
 
+    Args:
+        entries: The data points to create the dataset from.
+
+    Returns:
+        The created dataset.
+    """
     copied_entries = [copy.deepcopy(entry) for entry in entries]
 
     copied_entries = [entry for entry in entries]
