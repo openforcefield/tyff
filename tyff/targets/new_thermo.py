@@ -6,10 +6,8 @@ import torch
 
 import tyff
 import tyff.converters
-from tyff._serialization import load_tensor_force_field
-from tyff.compute.jobs import make_job_id
-from tyff.configs.liquid import BulkLiquid
 from tyff.configs.targets.thermo import DataEntry
+
 
 def load_remote_observables(
     force_field_per_epoch: tyff.TensorForceField,
@@ -17,7 +15,7 @@ def load_remote_observables(
     job_ids: list[str],
 ) -> dict[str, dict]:
     """Load observables and attach to graph."""
-    from tyff.mm._ops import _pack_force_field, RemoteEnsembleAverage
+    from tyff.mm._ops import RemoteEnsembleAverage, _pack_force_field
 
     tensors, *_ = _pack_force_field(
         force_field_per_epoch
@@ -56,25 +54,25 @@ def load_remote_observables(
 def compute_properties(
     dataset: Sequence[DataEntry],
     observables: dict[str, dict[str, torch.Tensor]],
+    simulation_root: str,
 ) -> list[tuple[dict, dict]]:
-    from tyff.compute.prep import _compute_configs_from_data_entry
 
     means_and_stds: list[tuple[dict, dict]] = list()
+
+    with open(pathlib.Path(simulation_root) / "target_job_map.json") as f:
+        target_compute_mapping = {tuple(k): v for k, v in json.load(f)}
 
     for entry in dataset:
         if entry["tag"] == "density":
             # this includes replicates, but only jobs for this physical property target
             # structure is a list (length n_replicates) of tuples, each tuple is
             # 1-length and contains a compute config for (a single) liquid job
-            compute_configs: Sequence[tuple[BulkLiquid, ...]] = _compute_configs_from_data_entry(
-                data_entry=entry,
-                force_field=FORCE_FIELD,
-                n_molecules=N_MOLECULES,
-                n_replicates=N_REPLICATES,
-            )
 
-            # only one job per replicate in density calculatiosn
-            job_ids = [make_job_id(replicate[0]) for replicate in compute_configs]
+            compute_configs = list()
+
+            for as_submitted, job_ids in target_compute_mapping.items():
+                if as_submitted[0] == entry["id"]:
+                    compute_configs.append(job_ids)
 
             types_of_observables = [*observables[job_ids[0]].keys()]
 
@@ -117,7 +115,11 @@ def predict(
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     attached_means = load_remote_observables(force_field, base_dir, job_ids)
 
-    means_and_stds: list[dict[str, torch.Tensor]] = compute_properties(dataset, attached_means)
+    means_and_stds: list[dict[str, torch.Tensor]] = compute_properties(
+        dataset=dataset,
+        observables=attached_means,
+        simulation_root=base_dir,
+    )
 
     ref_values = [entry["value"] for entry in dataset]
     ref_stds = [entry["std"] for entry in dataset]
