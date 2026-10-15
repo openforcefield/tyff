@@ -552,3 +552,22 @@ def reweight_ensemble_averages(
 
     *avg_outputs, columns = _ReweightAverageOp.apply(kwargs, *tensors)
     return {column: avg for avg, column in zip(avg_outputs, columns, strict=True)}
+
+class RemoteEnsembleAverage(torch.autograd.Function):
+    @staticmethod
+    def forward(
+        ctx: torch.autograd.function.FunctionCtx,
+        values: torch.Tensor,
+        jacobian: torch.Tensor,
+        parameters: torch.Tensor,
+    ) -> torch.Tensor:
+        ctx.save_for_backward(jacobian)
+        return values.clone()
+
+    @staticmethod
+    def backward(
+        ctx: torch.autograd.function.FunctionCtx,
+        grad_output: torch.Tensor,
+    ) -> tuple[None, None, torch.Tensor]:
+        (jacobian,) = ctx.saved_tensors
+        return None, None, grad_output @ jacobian
