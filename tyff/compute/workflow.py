@@ -40,7 +40,7 @@ class SimulationWorkflow:
 
         # at scale these should become databases or something more robust
         self._targets = dict()
-        self._target_compute_mapping: dict[tuple[int, str, int, int], list[tuple[str, ...]]] = dict()
+        self._target_compute_mapping: dict[tuple[str, str, int, int], list[tuple[str, ...]]] = dict()
 
         # self.logger, maybe?
         logger = _set_up_logger(f"{base_dir}/workflow.log")
@@ -107,11 +107,23 @@ class SimulationWorkflow:
         )
 
         # track targets (+ other arg) mapped to compute runs (as job_id) so we can look up results later
-        self._target_compute_mapping[(target_config["id"], force_field, n_molecules, n_replicates)] = list()
-        for this_targets_compute_configs in compute_configs:
-            self._target_compute_mapping[(target_config["id"], force_field, n_molecules, n_replicates)].append(
-                tuple([make_job_id(compute_config) for compute_config in this_targets_compute_configs])
+        self._target_compute_mapping[
+            (
+                target_config["id"],
+                force_field,
+                n_molecules,
+                n_replicates,
             )
+        ] = list()
+        for this_targets_compute_configs in compute_configs:
+            self._target_compute_mapping[
+                (
+                    target_config["id"],
+                    force_field,
+                    n_molecules,
+                    n_replicates,
+                )
+            ].append(tuple([make_job_id(compute_config) for compute_config in this_targets_compute_configs]))
 
             # run each compute job - can be >1 compute job per property
             self.run(compute_configs=this_targets_compute_configs)
@@ -126,6 +138,20 @@ class SimulationWorkflow:
         import openff.toolkit
 
         from tyff._serialization import dump_tensor_force_field
+
+        # save these targets since they're probably going to be needed later
+        (pathlib.Path(self.base_dir) / "thermo_targets").mkdir(exist_ok=True)
+
+        if (pathlib.Path(self.base_dir) / "thermo_targets" / "targets.json").exists():
+            with open(pathlib.Path(self.base_dir) / "thermo_targets" / "targets.json") as f:
+                targets = json.load(f)
+        else:
+            targets = list()
+
+        targets.extend(target_configs)
+
+        with open(pathlib.Path(self.base_dir) / "thermo_targets" / "targets.json", "w") as f:
+            json.dump(targets, f, indent=4)
 
         unique_smiles = set()
 
@@ -157,7 +183,11 @@ class SimulationWorkflow:
 
         # dumps a JSON representation of the tensor representation of the SMIRNOFF force field
         with open(self._reference_force_fields / f"{force_field}.json", "w") as f:
-            json.dump(dump_tensor_force_field(reference_force_field), f)
+            json.dump(
+                dump_tensor_force_field(reference_force_field),
+                f,
+                indent=4,
+            )
 
         return [
             result
@@ -318,4 +348,12 @@ class SimulationWorkflow:
         return self
 
     def __exit__(self, *args):
+        with open(pathlib.Path(self.base_dir) / "target_job_map.json", "w") as f:
+            json.dump(
+                # keys are tuples, so just serialize key-val pairs as lists
+                [[list(k), v] for k, v in self._target_compute_mapping.items()],
+                f,
+                indent=4,
+            )
+
         self.shutdown()
