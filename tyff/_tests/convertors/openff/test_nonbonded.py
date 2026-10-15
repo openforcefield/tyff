@@ -26,7 +26,7 @@ def test_convert_electrostatics_am1bcc(ethanol, ethanol_interchange):
 
     potential, parameter_maps = convert_electrostatics([charge_collection], [ethanol.to_topology()], [None])
 
-    assert potential.type == "Electrostatics"
+    assert potential.handler_type == "Electrostatics"
     assert potential.fn == "coul"
 
     expected_attributes = torch.tensor([0.0, 0.0, 5.0 / 6.0, 1.0, 9.0], dtype=torch.float64)
@@ -278,7 +278,7 @@ def test_convert_vdw(ethanol, ethanol_interchange):
 
     potential, _parameter_maps = convert_vdw([vdw_collection], [ethanol.to_topology()], [None])
 
-    assert potential.type == "vdW"
+    assert potential.handler_type == "vdW"
     assert potential.fn == tyff.EnergyFn.VDW_LJ
 
 
@@ -300,5 +300,5 @@ def test_convert_dexp(ethanol, test_data_dir, toolkit_registry_rdkit_first):
     assert potential.attribute_cols[-2:] == ("alpha", "beta")
     assert potential.parameter_cols == ("epsilon", "r_min")
 
-    assert potential.type == "vdW"
+    assert potential.handler_type == "vdW"
     assert potential.fn == tyff.EnergyFn.VDW_DEXP

@@ -248,7 +248,7 @@ def convert_angle_potential(pot: tyff.TensorPotential, param_map: tyff.ValencePa
 @ffxml_converter(tyff.PotentialType.PROPER_TORSIONS, tyff.EnergyFn.TORSION_COSINE)
 @ffxml_converter(tyff.PotentialType.IMPROPER_TORSIONS, tyff.EnergyFn.TORSION_COSINE)
 def convert_torsion_potential(pot: tyff.TensorPotential, param_map: tyff.ValenceParameterMap, types: list[str]):
-    is_proper = pot.type == tyff.PotentialType.PROPER_TORSIONS
+    is_proper = pot.handler_type == tyff.PotentialType.PROPER_TORSIONS
 
     params = (param_map.assignment_matrix @ pot.parameters).detach().cpu().tolist()
 

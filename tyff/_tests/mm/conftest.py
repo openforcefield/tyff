@@ -42,6 +42,6 @@ def mock_argon_tensors(
         mock_argon_ff, openff.toolkit.Molecule.from_smiles("[Ar]").to_topology()
     )
     tensor_ff, [tensor_top] = tyff.converters.convert_interchange(interchange)
-    tensor_ff.potentials = [p for p in tensor_ff.potentials if p.type == "vdW"]
+    tensor_ff.potentials = [p for p in tensor_ff.potentials if p.handler_type == "vdW"]
 
     return tensor_ff, tensor_top
