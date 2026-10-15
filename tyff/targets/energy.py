@@ -34,11 +34,13 @@ class Entry(typing.TypedDict):
 
     coords: torch.Tensor
     """The coordinates [Å] the energies and forces were evaluated at with
-    ``shape=(n_confs, n_particles, 3)``."""
+    ``shape=(n_confs, n_atoms, 3)``. These should not include virtual sites, which
+    are added automatically from the force field when predicting."""
     energy: torch.Tensor
     """The reference energies [kcal/mol] with ``shape=(n_confs,)``."""
     forces: torch.Tensor
-    """The reference forces [kcal/mol/Å] with ``shape=(n_confs, n_particles, 3)``."""
+    """The reference forces [kcal/mol/Å] on each atom with
+    ``shape=(n_confs, n_atoms, 3)``."""
 
     box_vectors: torch.Tensor | None
     """The box vectors [Å] for periodic systems with ``shape=(n_confs, 3, 3)``, or
@@ -167,15 +169,32 @@ def predict(
 
         topology = topologies[smiles]
 
+        if coords.shape[1] != topology.n_atoms:
+            raise ValueError(
+                f"coords for {smiles} have {coords.shape[1]} particles but the topology has "
+                f"{topology.n_atoms} atoms. coords should not include virtual sites, as these "
+                "are added automatically."
+            )
+
+        # build v-sites from the grad-enabled atom coords so that v-site forces are
+        # mapped back onto their parent atoms by the chain rule
+        particle_coords = coords
+
+        if topology.v_sites is not None:
+            particle_coords = tyff.geometry.add_v_site_coords(topology.v_sites, coords, force_field)
+
         if box_vectors is not None:
             # tyff does not support batched periodic evaluations,
             # so we loop over conformers.
             box_vectors = tyff.utils.tensor_like(box_vectors, coords_flat).reshape(len(energy_ref), 3, 3)
             energy_pred = torch.cat(
-                [tyff.compute_energy(topology, force_field, coords[i], box_vectors[i]) for i in range(len(energy_ref))]
+                [
+                    tyff.compute_energy(topology, force_field, particle_coords[i], box_vectors[i])
+                    for i in range(len(energy_ref))
+                ]
             )
         else:
-            energy_pred = tyff.compute_energy(topology, force_field, coords, None)
+            energy_pred = tyff.compute_energy(topology, force_field, particle_coords, None)
 
         forces_pred = -torch.autograd.grad(
             energy_pred.sum(),
