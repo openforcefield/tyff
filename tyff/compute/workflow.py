@@ -317,7 +317,6 @@ class SimulationWorkflow:
                 checkpoint=File(f"{job_dir}/production_checkpoint.chk"),
             )
 
-            return {"job_id": job_id, "future": {"files": files}}
             # wrap in a real AppFuture (not a plain dict) so callers can
             # uniformly call .result() regardless of which branch ran
             return {"job_id": job_id, "future": _completed_future({"files": files})}
