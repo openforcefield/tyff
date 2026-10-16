@@ -18,6 +18,7 @@ NNPOps = "*"
 openff-packmol = "0.1.*"
 openff-evaluator-base = "*"
 # shims / constraints to help solver
+python = ">=3.12"  # shim?
 pyarrow = "20.*"
 bokeh = "3.9.*"
 filelock = "<4"  # parsl stuck on 3.x
@@ -25,6 +26,7 @@ sqlalchemy = ">=2.0.14,<2.1.0"
 datasets = "4.*"  # can probably remove when pyarrow >20
 
 [pypi-dependencies]
+# python = ">=3.12"  # shim?
 pydantic = "*"
 pyyaml = "*"
 numpy = "*"
