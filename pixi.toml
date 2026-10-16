@@ -24,6 +24,8 @@ bokeh = "3.9.*"
 filelock = "<4"  # parsl stuck on 3.x
 sqlalchemy = ">=2.0.14,<2.1.0"
 datasets = "4.*"  # can probably remove when pyarrow >20
+networkx = "<3.3"  # shim for pars[visualization]
+pandas = "<3"
 
 [pypi-dependencies]
 # python = ">=3.12"  # shim?
@@ -36,7 +38,7 @@ symengine = "*"
 rdkit = "*"
 sqlmodel = "*"
 rdkit-stubs = "*"
-parsl = "==2026.*"
+parsl = { version = "==2026.*", extras = ["monitoring", "visualization"] }
 rich = "*"
 tyff = { path = ".", editable = true }
 # probably optional-ish below here
