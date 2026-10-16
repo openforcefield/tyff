@@ -3,6 +3,7 @@ import logging
 import pathlib
 from collections.abc import Sequence
 
+import datasets
 import numpy
 import parsl
 import torch
@@ -116,9 +117,9 @@ class SimulationWorkflow:
             # run each compute job - can be >1 compute job per property
             self.run(compute_configs=this_targets_compute_configs)
 
-    def submit_target_batch(
+    def submit_dataset(
         self,
-        target_configs: Sequence[DataEntry],
+        dataset: datasets.Dataset,  # should be something that unpacks to DataEntry on iteration
         force_field: str,
         n_molecules: int,
         n_replicates: int = 3,
@@ -129,7 +130,8 @@ class SimulationWorkflow:
 
         unique_smiles = set()
 
-        for target in target_configs:
+        for target in dataset:
+            target: DataEntry
             for smiles_ in target["smiles"]:
                 unique_smiles.add(smiles_)
 
@@ -146,7 +148,7 @@ class SimulationWorkflow:
             interchanges.append(interchange)
 
             with open(pathlib.Path(self.base_dir) / "interchanges" / f"interchange_{index}.json", "w") as f:
-                f.write(interchange.model_dump_json())
+                f.write(interchange.model_dump_json(indent=4))
 
         self._reference_force_fields = pathlib.Path(self.base_dir) / "reference_force_fields"
         pathlib.Path(self._reference_force_fields).mkdir(exist_ok=True)
@@ -161,7 +163,7 @@ class SimulationWorkflow:
 
         return [
             result
-            for spec in target_configs
+            for spec in dataset
             if (result := self.submit_target(spec, force_field, n_molecules, n_replicates)) is not None
         ]
 
