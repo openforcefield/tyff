@@ -18,7 +18,7 @@ def test_convert_bonds(ethanol, ethanol_interchange):
 
     potential, parameter_maps = convert_bonds([bond_collection], [set()])
 
-    assert potential.type == "Bonds"
+    assert potential.handler_type == "Bonds"
     assert potential.fn == "k/2*(r-length)**2"
 
     assert potential.attributes is None
@@ -102,7 +102,7 @@ def test_convert_angles_etoh(ethanol, ethanol_interchange, with_constraints):
 
     potential, parameter_maps = convert_angles([angle_collection], [constraints])
 
-    assert potential.type == "Angles"
+    assert potential.handler_type == "Angles"
     assert potential.fn == "k/2*(theta-angle)**2"
 
     assert potential.attributes is None
@@ -180,7 +180,7 @@ def test_convert_propers(ethanol, ethanol_interchange):
 
     potential, parameter_maps = convert_propers([proper_collection])
 
-    assert potential.type == "ProperTorsions"
+    assert potential.handler_type == "ProperTorsions"
     assert potential.fn == "k*(1+cos(periodicity*theta-phase))"
 
     hcco_smirks = "[#1:1]-[#6X4:2]-[#6X4:3]-[#8X2:4]"
@@ -228,5 +228,5 @@ def test_convert_impropers(formaldehyde, formaldehyde_interchange):
 
     potential, _parameter_maps = convert_impropers([improper_collection])
 
-    assert potential.type == "ImproperTorsions"
+    assert potential.handler_type == "ImproperTorsions"
     assert potential.fn == "k*(1+cos(periodicity*theta-phase))"

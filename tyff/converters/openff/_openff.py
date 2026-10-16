@@ -120,7 +120,7 @@ def _handlers_to_potential(
         )
 
     potential = tyff.TensorPotential(
-        type=handler_type,
+        handler_type=handler_type,
         fn=potential_fn,
         parameters=parameters,
         parameter_keys=parameter_keys,
@@ -315,7 +315,7 @@ def convert_handlers(
         converter_kwargs["constraints"] = unique_idxs
 
     potentials_by_type = (
-        {} if potentials is None else {potential.type: (potential, maps) for potential, maps in potentials}
+        {} if potentials is None else {potential.handler_type: (potential, maps) for potential, maps in potentials}
     )
 
     dependencies = {}
@@ -323,7 +323,7 @@ def convert_handlers(
 
     if len(depends_on) > 0:
         missing_deps = {dep for dep in depends_on if dep not in potentials_by_type}
-        assert len(missing_deps) == 0, "missing dependencies"
+        assert len(missing_deps) == 0, f"missing dependencies: {missing_deps}"
 
         dependencies = {dep: potentials_by_type[dep] for dep in depends_on}
         assert "dependencies" in converter_spec.parameters, "dependencies not accepted"
@@ -334,14 +334,14 @@ def convert_handlers(
     converted = converter.fn(handlers, **converter_kwargs)
     converted = [converted] if not isinstance(converted, list) else converted
 
-    converted_by_type = {potential.type: (potential, maps) for potential, maps in converted}
+    converted_by_type = {potential.handler_type: (potential, maps) for potential, maps in converted}
     assert len(converted_by_type) == len(converted), "duplicate potentials found"
 
     potentials_by_type = {
         **{
-            potential.type: (potential, maps)
+            potential.handler_type: (potential, maps)
             for potential, maps in potentials_by_type.values()
-            if potential.type not in depends_on and potential.type not in converted_by_type
+            if potential.handler_type not in depends_on and potential.handler_type not in converted_by_type
         },
         **converted_by_type,
     }
@@ -480,12 +480,12 @@ def convert_interchange(
 
     for potential, parameter_maps in converted:
         potentials.append(potential)
-        parameter_maps_by_handler[potential.type] = parameter_maps
+        parameter_maps_by_handler[potential.handler_type] = parameter_maps
 
     tensor_topologies = [
         _convert_topology(
             topology,
-            {potential.type: parameter_maps_by_handler[potential.type][i] for potential in potentials},
+            {potential.handler_type: parameter_maps_by_handler[potential.handler_type][i] for potential in potentials},
             v_site_maps[i],
             constraints[i],
         )

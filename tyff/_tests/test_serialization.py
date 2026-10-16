@@ -16,8 +16,8 @@ def compare_tensor_force_fields(
         pytest.fail("Failed: Number of potentials do not match")
 
     for potential1, potential2 in zip(force_field1.potentials, force_field2.potentials):
-        if potential1.type != potential2.type:
-            pytest.fail(f"Failed: potential type mismatch ({potential1.type} != {potential2.type})")
+        if potential1.handler_type != potential2.handler_type:
+            pytest.fail(f"Failed: potential type mismatch ({potential1.handler_type} != {potential2.handler_type})")
         if potential1.fn != potential2.fn:
             pytest.fail(f"Failed: potential fn mismatch ({potential1.fn} != {potential2.fn})")
         if potential1.parameter_units != potential2.parameter_units:

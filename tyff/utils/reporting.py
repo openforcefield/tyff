@@ -115,7 +115,7 @@ def print_potential_summary(potential: tyff.TensorPotential):
         )
         parameter_rows.append(row)
 
-    print(f" {potential.type} ".center(88, "="), flush=True)
+    print(f" {potential.handler_type} ".center(88, "="), flush=True)
     print(f"fn={potential.fn}", flush=True)
 
     if potential.attributes is not None:

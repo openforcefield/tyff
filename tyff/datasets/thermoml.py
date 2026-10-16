@@ -1880,7 +1880,7 @@ class ThermoMLProperty:
 
         # Evaluator had a .metadata attribute which we don't have here
         obj = {
-            "type": self.type_string,
+            "tag": self.type_string,
             "substance": str(self.substance),
             "phase": str(self.phase),
             "temperature": _standardize_temperature(self.temperature),
@@ -2178,8 +2178,8 @@ class ThermoMLDataSet(pydantic.BaseModel):
 
         # https://github.com/openforcefield/openff-evaluator/blob/c9b55687be3381768d75afdea01e9e18b5a35fac/openff/evaluator/datasets/datasets.py#L105-L110
         return DataEntry(
-            id=measured_property._get_raw_property_hash(),
-            tag=_property_tag_map[measured_property.type_string],
+            id=str(measured_property._get_raw_property_hash()),
+            tag=_property_tag_map[measured_property.type_string],  # type: ignore[typeddict-item]
             smiles=[component.smiles for component in measured_property.substance.components],
             x=[value for value in measured_property.substance.amounts.values()],
             temperature=_standardize_temperature(measured_property.temperature),  # type: ignore[typeddict-item]

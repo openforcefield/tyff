@@ -201,7 +201,7 @@ def convert_dexp(
         ("epsilon", "r_min"),
         ("cutoff", "switch_width", "alpha", "beta"),
     )
-    potential.type = tyff.PotentialType.VDW
+    potential.handler_type = tyff.PotentialType.VDW
     potential.fn = tyff.EnergyFn.VDW_DEXP
 
     return potential, parameter_maps

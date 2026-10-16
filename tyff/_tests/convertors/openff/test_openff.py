@@ -37,7 +37,7 @@ def test_convert_handler(ethanol, ethanol_interchange, mocker):
     # avoid already registered converter error
     importlib.import_module("tyff.converters.openff.nonbonded")
 
-    mock_deps = [(mocker.MagicMock(type="mock"), [mocker.MagicMock()])]
+    mock_deps = [(mocker.MagicMock(handler_type="mock"), [mocker.MagicMock()])]
     mock_result = (mocker.MagicMock(), [])
 
     mock_convert = mocker.patch(
