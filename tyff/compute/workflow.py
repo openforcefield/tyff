@@ -5,9 +5,8 @@ from collections.abc import Sequence
 
 import numpy
 import parsl
-from parsl import File, python_app
 import torch
-from parsl import File
+from parsl import File, python_app
 from rich import print
 
 import tyff.converters
