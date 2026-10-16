@@ -59,10 +59,10 @@ def _prepare_openmm_system(
     ):
         single_molecule_interchange = force_field.create_interchange(unique_molecule.to_topology())
         with open(f"{job_dir}/single_molecule_interchange_{unique_molecule_index}.json", "w") as f:
-            f.write(single_molecule_interchange.model_dump_json())
+            f.write(single_molecule_interchange.model_dump_json(indent=4))
 
     with open(files["interchange"].filepath, "w") as f:
-        f.write(interchange.model_dump_json())
+        f.write(interchange.model_dump_json(indent=4))
 
     openmm_system = interchange.to_openmm()
 
