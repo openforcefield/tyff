@@ -25,7 +25,7 @@ def local_config(max_workers: int = 10):
                     min_blocks=1,
                     max_blocks=1,
                     worker_init=(
-                        "export OPENMM_DEFAULT_PLATFORM=CPU; export OMP_NUM_THREADS=1; export OPENMM_CPU_THREADS=1"
+                        "export OPENMM_DEFAULT_PLATFORM=CPU; export OMP_NUM_THREADS=1; "
                     ),
                 ),
                 max_workers_per_node=max_workers,
