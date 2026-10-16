@@ -1,5 +1,6 @@
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor, ThreadPoolExecutor
+from parsl.monitoring.monitoring import MonitoringHub
 from parsl.providers import LocalProvider, SlurmProvider
 from parsl.utils import get_all_checkpoints
 
@@ -32,6 +33,9 @@ def local_config(max_workers: int = 10):
             )
         ],
         strategy=None,  # Disable dynamic scaling for simpler local execution
+        monitoring=MonitoringHub(
+            resource_monitoring_interval=5,  # seconds; 0 disables per-task resource sampling
+        ),
     )
 
 

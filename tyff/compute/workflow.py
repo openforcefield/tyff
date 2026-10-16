@@ -88,7 +88,7 @@ class SimulationWorkflow:
     def _submit_compute_batch(
         self,
         compute_configs: Sequence[BaseComputeConfig],
-    ):
+    ) -> list[dict]:
         """Submit many jobs, skipping already-complete ones."""
 
         logger.info(f"Submitting {len(compute_configs)} compute configs to workflow")
@@ -265,9 +265,13 @@ class SimulationWorkflow:
         results = []
         for item in pending:
             try:
+                logger.info(f"Calling result() on job with ID {item['job_id']}")
                 result = item["future"].result()
+                logger.info(f"Job with ID {item['job_id']} completed successfully")
                 results.append({"job_id": item["job_id"], "result": result})
             except Exception as e:
+                logger.info(f"Job with ID {item['job_id']} errored with {e!s}!")
+                logger.info(f"current value is: {item=}")
                 results.append({"job_id": item["job_id"], "error": str(e)})
 
         return results
