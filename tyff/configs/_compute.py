@@ -17,3 +17,5 @@ class BaseComputeConfig(typing_extensions.TypedDict, extra_items=typing.Any):
     x: list[float]
 
     temperature: float
+
+    pressure: float
