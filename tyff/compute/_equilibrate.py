@@ -142,7 +142,7 @@ def _run_equilibration(
             output_file=files["msgpack_trajectory"].filepath,
             report_interval=1000,
             beta=1.0 / (openmm.unit.MOLAR_GAS_CONSTANT_R * compute_config["temperature"] * openmm.unit.kelvin),
-            pressure=pressure * openmm.unit.kilopascal,
+            pressure=pressure if pressure is None else openmm.unit.kilopascal,
         )
     )
 
