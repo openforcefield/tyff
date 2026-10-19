@@ -1,5 +1,6 @@
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor, ThreadPoolExecutor
+from parsl.monitoring.monitoring import MonitoringHub
 from parsl.providers import LocalProvider, SlurmProvider
 from parsl.utils import get_all_checkpoints
 
@@ -23,12 +24,16 @@ def local_config(max_workers: int = 10):
                     init_blocks=1,
                     min_blocks=1,
                     max_blocks=1,
+                    worker_init=("export OPENMM_DEFAULT_PLATFORM=CPU; export OMP_NUM_THREADS=1; "),
                 ),
                 max_workers_per_node=max_workers,
                 cores_per_worker=1,
             )
         ],
         strategy=None,  # Disable dynamic scaling for simpler local execution
+        monitoring=MonitoringHub(
+            resource_monitoring_interval=5,  # seconds; 0 disables per-task resource sampling
+        ),
     )
 
 

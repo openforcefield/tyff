@@ -3,10 +3,11 @@ import logging
 import pathlib
 from collections.abc import Sequence
 
+import datasets
 import numpy
 import parsl
 import torch
-from parsl import File
+from parsl import File, python_app
 from rich import print
 
 import tyff.converters
@@ -30,6 +31,17 @@ from tyff.configs.targets.thermo import DataEntry
 logger = logging.getLogger(__name__)  # module-level logger, not root
 
 
+@python_app
+def _completed_future(value):
+    """Wrap an already-known value in a real AppFuture.
+
+    Used by the short-circuit path in _common_run so that every
+    "future" handed back from _common_run supports .result(), whether
+    or not the job actually got (re)submitted to Parsl.
+    """
+    return value
+
+
 class SimulationWorkflow:
     def __init__(self, base_dir: str, parsl_config: parsl.Config):
         from tyff.compute._logging import _set_up_logger
@@ -41,6 +53,10 @@ class SimulationWorkflow:
         # at scale these should become databases or something more robust
         self._targets = dict()
         self._target_compute_mapping: dict[tuple[str, str, int, int], list[tuple[str, ...]]] = dict()
+
+        # futures submitted via submit_target/submit_target_batch that haven't
+        # been waited on yet; drained by wait()
+        self._pending: list[dict] = []
 
         # self.logger, maybe?
         logger = _set_up_logger(f"{base_dir}/workflow.log")
@@ -72,7 +88,7 @@ class SimulationWorkflow:
     def _submit_compute_batch(
         self,
         compute_configs: Sequence[BaseComputeConfig],
-    ):
+    ) -> list[dict]:
         """Submit many jobs, skipping already-complete ones."""
 
         logger.info(f"Submitting {len(compute_configs)} compute configs to workflow")
@@ -125,12 +141,17 @@ class SimulationWorkflow:
                 )
             ].append(tuple([make_job_id(compute_config) for compute_config in this_targets_compute_configs]))
 
-            # run each compute job - can be >1 compute job per property
-            self.run(compute_configs=this_targets_compute_configs)
+            # submit each compute job without blocking - can be >1 compute job per property.
+            # NOTE: this used to call self.run(...), which calls .result() on every
+            # future before returning. That made submit_target fully synchronous, so
+            # back-to-back calls (e.g. looping over n_molecules) ran strictly serially
+            # instead of concurrently. Queue the futures instead and let callers drain
+            # them with wait() once everything they want submitted is submitted.
+            self._pending.extend(self._submit_compute_batch(compute_configs=this_targets_compute_configs))
 
-    def submit_target_batch(
+    def submit_dataset(
         self,
-        target_configs: Sequence[DataEntry],
+        dataset: datasets.Dataset,  # should be something that unpacks to DataEntry on iteration
         force_field: str,
         n_molecules: int,
         n_replicates: int = 3,
@@ -155,7 +176,8 @@ class SimulationWorkflow:
 
         unique_smiles = set()
 
-        for target in target_configs:
+        for target in dataset:
+            target: DataEntry
             for smiles_ in target["smiles"]:
                 unique_smiles.add(smiles_)
 
@@ -167,12 +189,12 @@ class SimulationWorkflow:
         force_field_ = openff.toolkit.ForceField(force_field)
         for index, unique_smiles_ in enumerate(sorted(unique_smiles)):
             interchange = force_field_.create_interchange(
-                openff.toolkit.Molecule.from_smiles(unique_smiles_).to_topology()
+                openff.toolkit.Molecule.from_mapped_smiles(unique_smiles_).to_topology()
             )
             interchanges.append(interchange)
 
             with open(pathlib.Path(self.base_dir) / "interchanges" / f"interchange_{index}.json", "w") as f:
-                f.write(interchange.model_dump_json())
+                f.write(interchange.model_dump_json(indent=4))
 
         self._reference_force_fields = pathlib.Path(self.base_dir) / "reference_force_fields"
         pathlib.Path(self._reference_force_fields).mkdir(exist_ok=True)
@@ -191,7 +213,7 @@ class SimulationWorkflow:
 
         return [
             result
-            for spec in target_configs
+            for spec in dataset
             if (result := self.submit_target(spec, force_field, n_molecules, n_replicates)) is not None
         ]
 
@@ -254,12 +276,32 @@ class SimulationWorkflow:
         """Submit a batch and block until all complete."""
         pending = self._submit_compute_batch(compute_configs)
 
+        return self._drain(pending)
+
+    def wait(self):
+        """Block until every future queued by submit_target/submit_target_batch completes.
+
+        Call this once after all desired submit_target(_batch) calls have been
+        made, so Parsl can actually run them concurrently in the meantime.
+        Returns results/errors per job and clears the pending queue.
+        """
+        results = self._drain(self._pending)
+        self._pending = []
+        return results
+
+    @staticmethod
+    def _drain(pending):
+
         results = []
         for item in pending:
             try:
+                logger.info(f"Calling result() on job with ID {item['job_id']}")
                 result = item["future"].result()
+                logger.info(f"Job with ID {item['job_id']} completed successfully")
                 results.append({"job_id": item["job_id"], "result": result})
             except Exception as e:
+                logger.info(f"Job with ID {item['job_id']} errored with {e!s}!")
+                logger.info(f"current value is: {item=}")
                 results.append({"job_id": item["job_id"], "error": str(e)})
 
         return results
@@ -311,7 +353,10 @@ class SimulationWorkflow:
                 checkpoint=File(f"{job_dir}/production_checkpoint.chk"),
             )
 
-            return {"job_id": job_id, "future": {"files": files}}
+            # wrap in a real AppFuture (not a plain dict) so callers can
+            # uniformly call .result() regardless of which branch ran
+            return {"job_id": job_id, "future": _completed_future({"files": files})}
+
         else:
             logger.info(f"short-circuit check for job {job_id} failed, running full workflow")
 
@@ -356,4 +401,5 @@ class SimulationWorkflow:
                 indent=4,
             )
 
+        self.wait()
         self.shutdown()

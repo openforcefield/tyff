@@ -4,6 +4,7 @@ channels = ["conda-forge"]
 platforms = ["linux-64", "osx-arm64"]
 
 [tasks]
+run_mvp = "python examples/mvp/run.py"
 run_mypy = "python -m mypy -p 'tyff'"
 run_tests = { cmd = "python -m pytest -n logical tyff/_tests", env = { OPENMM_DEFAULT_PLATFORM = "CPU" } }
 dev_tests = { cmd = "python -m pytest -s -x --pdb --lf tyff/_tests", env = { OPENMM_DEFAULT_PLATFORM = "CPU" } }
@@ -17,13 +18,17 @@ NNPOps = "*"
 openff-packmol = "0.1.*"
 openff-evaluator-base = "*"
 # shims / constraints to help solver
+python = ">=3.12"  # shim?
 pyarrow = "20.*"
 bokeh = "3.9.*"
 filelock = "<4"  # parsl stuck on 3.x
 sqlalchemy = ">=2.0.14,<2.1.0"
 datasets = "4.*"  # can probably remove when pyarrow >20
+networkx = "<3.3"  # shim for parsl[visualization]
+pandas = "<3"
 
 [pypi-dependencies]
+# python = ">=3.12"  # shim?
 pydantic = "*"
 pyyaml = "*"
 numpy = "*"
@@ -33,7 +38,7 @@ symengine = "*"
 rdkit = "*"
 sqlmodel = "*"
 rdkit-stubs = "*"
-parsl = "==2026.*"
+parsl = { version = "==2026.*", extras = ["monitoring", "visualization"] }
 rich = "*"
 tyff = { path = ".", editable = true }
 # probably optional-ish below here
