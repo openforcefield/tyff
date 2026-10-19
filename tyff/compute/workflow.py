@@ -169,7 +169,7 @@ class SimulationWorkflow:
         else:
             targets = list()
 
-        targets.extend(target_configs)
+        targets.extend(*dataset)
 
         with open(pathlib.Path(self.base_dir) / "thermo_targets" / "targets.json", "w") as f:
             json.dump(targets, f, indent=4)
