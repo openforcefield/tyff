@@ -125,7 +125,7 @@ class SimulationWorkflow:
         # track targets (+ other arg) mapped to compute runs (as job_id) so we can look up results later
         self._target_compute_mapping[
             (
-                target_config["id"],
+                target_config["id"],  # this is unmodified from input data and therefore could look funky
                 force_field,
                 n_molecules,
                 n_replicates,
@@ -169,7 +169,8 @@ class SimulationWorkflow:
         else:
             targets = list()
 
-        targets.extend(*dataset)
+        # list-ify dicts, which should quack like `DataEntry`s, via iterating over datasets
+        targets.extend([*dataset])
 
         with open(pathlib.Path(self.base_dir) / "thermo_targets" / "targets.json", "w") as f:
             json.dump(targets, f, indent=4)
@@ -207,6 +208,14 @@ class SimulationWorkflow:
         with open(self._reference_force_fields / f"{force_field}.json", "w") as f:
             json.dump(
                 dump_tensor_force_field(reference_force_field),
+                f,
+                indent=4,
+            )
+
+        with open(pathlib.Path(self.base_dir) / "target_job_map.json", "w") as f:
+            json.dump(
+                # keys are tuples, so just serialize key-val pairs as lists
+                [[list(k), v] for k, v in self._target_compute_mapping.items()],
                 f,
                 indent=4,
             )
@@ -393,13 +402,5 @@ class SimulationWorkflow:
         return self
 
     def __exit__(self, *args):
-        with open(pathlib.Path(self.base_dir) / "target_job_map.json", "w") as f:
-            json.dump(
-                # keys are tuples, so just serialize key-val pairs as lists
-                [[list(k), v] for k, v in self._target_compute_mapping.items()],
-                f,
-                indent=4,
-            )
-
         self.wait()
         self.shutdown()
