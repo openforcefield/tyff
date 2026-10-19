@@ -77,6 +77,7 @@ def test_different_n_molecules_do_not_deduplicate(density_entry):
 
     assert len(set(get_liquid_deduplication_key(val[0]) for val in compute_configs)) == 2
 
+
 def test_pressure_in_gas_configs(dhvap_entry):
     compute_configs = compute_configs_from_data_entries(
         data_entries=[dhvap_entry],

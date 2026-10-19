@@ -39,20 +39,22 @@ def density_entry() -> DataEntry:
         "source": "",
     }
 
+
 @pytest.fixture
 def dhvap_entry() -> DataEntry:
     return {
-        'id': 'dhvap_5837d11ad8f2f656',
-        'tag': 'enthalpy_of_vaporization',  # maybe  enthalpy_of_vaporization
-        'smiles': ['[H:9][c:3]1[c:2]([c:1]([c:6]([c:5]([c:4]1[H:10])[H:11])[H:12])[H:7])[H:8]'],
-        'x': [1.0],
-        'temperature': 298.0,
-        'pressure': 101.325,
-        'value': 7.946940726577438,
-        'std': 0.2294455066921606,
-        'units': 'kcal/mol',
-        'source': '10.1021/je800091s',
+        "id": "dhvap_5837d11ad8f2f656",
+        "tag": "enthalpy_of_vaporization",  # maybe  enthalpy_of_vaporization
+        "smiles": ["[H:9][c:3]1[c:2]([c:1]([c:6]([c:5]([c:4]1[H:10])[H:11])[H:12])[H:7])[H:8]"],
+        "x": [1.0],
+        "temperature": 298.0,
+        "pressure": 101.325,
+        "value": 7.946940726577438,
+        "std": 0.2294455066921606,
+        "units": "kcal/mol",
+        "source": "10.1021/je800091s",
     }
+
 
 @pytest.fixture
 def dielectric_entry() -> DataEntry:
