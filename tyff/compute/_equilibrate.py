@@ -137,12 +137,14 @@ def _run_equilibration(
         compute_config["replicate_index"] + 1,
     )
 
+    pressure_for_report = None if pressure is None else pressure * openmm.unit.kilopascal
+
     simulation.reporters.append(
         tyff.mm.TensorReporter(
             output_file=files["msgpack_trajectory"].filepath,
             report_interval=1000,
             beta=1.0 / (openmm.unit.MOLAR_GAS_CONSTANT_R * compute_config["temperature"] * openmm.unit.kelvin),
-            pressure=pressure * openmm.unit.kilopascal,
+            pressure=pressure_for_report,
         )
     )
 
