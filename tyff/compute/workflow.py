@@ -163,7 +163,7 @@ class SimulationWorkflow:
         force_field_ = openff.toolkit.ForceField(force_field)
         for index, unique_smiles_ in enumerate(sorted(unique_smiles)):
             interchange = force_field_.create_interchange(
-                openff.toolkit.Molecule.from_smiles(unique_smiles_).to_topology()
+                openff.toolkit.Molecule.from_mapped_smiles(unique_smiles_).to_topology()
             )
             interchanges.append(interchange)
 

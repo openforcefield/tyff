@@ -72,7 +72,7 @@ def main():
                 density_targets,
                 force_field="openff-2.3.0.offxml",
                 n_molecules=200,
-                n_replicates=5,
+                n_replicates=9,
             )
 
             # naive property estimate, no tensor math
@@ -81,7 +81,7 @@ def main():
                     density_target,
                     force_field="openff-2.3.0.offxml",
                     n_molecules=200,
-                    n_replicates=5,
+                    n_replicates=9,
                 )
 
     else:
@@ -90,11 +90,11 @@ def main():
             base_dir,
             local_config(max_workers=8),
         ) as workflow:
-            workflow.submit_target_batch(
+            workflow.submit_dataset(
                 density_targets,
                 force_field="openff-2.3.0.offxml",
                 n_molecules=200,
-                n_replicates=5,
+                n_replicates=9,
             )
 
             workflow.wait()
@@ -105,7 +105,7 @@ def main():
                     density_target,
                     force_field="openff-2.3.0.offxml",
                     n_molecules=200,
-                    n_replicates=5,
+                    n_replicates=9,
                 )
 
     # TODO: Show how to check status while running
@@ -140,7 +140,7 @@ def main():
             target=density_target,
             force_field="openff-2.3.0.offxml",
             n_molecules=200,
-            n_replicates=3,
+            n_replicates=9,
         )
         for density_target in density_targets
     ]
