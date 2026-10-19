@@ -10,8 +10,6 @@ class BulkLiquid(BaseComputeConfig):
     Maybe add an RNG seed?
     """
 
-    pressure: float
-
     density: float | None
 
     """
