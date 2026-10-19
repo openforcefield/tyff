@@ -68,7 +68,7 @@ def main():
                 account="dmobley_lab_gpu",
             ),
         ) as workflow:
-            workflow.submit_target_batch(
+            workflow.submit_dataset(
                 density_targets,
                 force_field="openff-2.3.0.offxml",
                 n_molecules=200,
