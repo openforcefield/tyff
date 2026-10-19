@@ -52,7 +52,14 @@ class SimulationWorkflow:
 
         # at scale these should become databases or something more robust
         self._targets = dict()
-        self._target_compute_mapping: dict[tuple[str, str, int, int], list[tuple[str, ...]]] = dict()
+
+        if pathlib.Path(pathlib.Path(self.base_dir) / "simulations" / "target_job_map.json").exists():
+            with open(pathlib.Path(self.base_dir) / "simulations" / "target_job_map.json") as f:
+                # don't overwrite this if it already exists
+                self._target_compute_mapping = {tuple(k): v for k, v in json.load(f)}
+        else:
+            # initialize to empty dict otherwise
+            self._target_compute_mapping: dict[tuple[str, str, int, int], list[tuple[str, ...]]] = dict()
 
         # futures submitted via submit_target/submit_target_batch that haven't
         # been waited on yet; drained by wait()

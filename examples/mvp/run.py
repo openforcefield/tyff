@@ -12,7 +12,6 @@ import tyff.train
 from tyff.compute._logging import _set_up_logger
 from tyff.compute.configs import local_config
 from tyff.compute.workflow import SimulationWorkflow
-from tyff.configs.targets.thermo import DataEntry
 from tyff.converters.openff._tensors import convert_tensor_force_field
 from tyff.mm._ops import RemoteEnsembleAverage
 from tyff.targets import energy, thermo
@@ -52,6 +51,8 @@ def load_datasets(root: Path) -> tuple[Dataset, Dataset]:
     thermo_data = Dataset.load_from_disk(root / "data/thermo")
     energy_data = Dataset.load_from_disk(root / "data/energy")
 
+    thermo_data = thermo_data.filter(lambda x: x["tag"] == "density")
+
     logger.info(f"Loaded {len(thermo_data)} thermo entries and {len(energy_data)} energy entries")
 
     return thermo_data, energy_data
@@ -59,7 +60,7 @@ def load_datasets(root: Path) -> tuple[Dataset, Dataset]:
 
 def simulate(
     force_field: tyff.TensorForceField,
-    root_dir: Path,
+    epoch_dir: Path,
     thermo_data: Dataset,
     n_molecules: int,
     n_replicates: int,
@@ -94,16 +95,16 @@ def simulate(
     )
 
     logger.info("Making directory for this epoch's simulations")
-    root_dir.mkdir(exist_ok=True)
+    epoch_dir.mkdir(exist_ok=True)
 
     logger.info("Writing out the current SMIRNOFF force field to file")
-    smirnoff_force_field_file = str(root_dir / "current_force_field.offxml")
+    smirnoff_force_field_file = str(epoch_dir / "current_force_field.offxml")
     current_smirnoff_force_field.to_file(smirnoff_force_field_file)
 
     logger.info("Setting up simulation workflow")
     with SimulationWorkflow(
-        base_dir=str(root_dir / "simulations"),
-        parsl_config=local_config(max_workers=8),
+        base_dir=str(epoch_dir / "simulations"),
+        parsl_config=local_config(max_workers=6),
     ) as workflow:
         logger.info("Submitting dataset")
         workflow.submit_dataset(
@@ -165,12 +166,13 @@ def load_remote_observables(
 def compute_properties(
     dataset: Dataset,
     observables: dict[str, dict[str, torch.Tensor]],
-    simulation_root: Path,
+    epoch_dir: Path,
 ) -> list[tuple[dict[str, torch.Tensor], dict[str, torch.Tensor]]]:
 
     means_and_stds: list[tuple[dict[str, torch.Tensor], dict[str, torch.Tensor]]] = list()
 
-    with open(simulation_root / "target_job_map.json") as f:
+    # think about better standardizing some of these paths
+    with open(epoch_dir / "simulations" / "target_job_map.json") as f:
         target_compute_mapping = {tuple(k): v for k, v in json.load(f)}
 
     for entry in dataset:  # type: ignore
@@ -186,6 +188,7 @@ def compute_properties(
             # this will be the same for all job_ids within this target?
             # all targets will be the same (i.e. always computing dhvap)
             # but job-to-job maybe not? (i.e. gas vs. liquid jobs)
+
             types_of_observables = [*observables[job_ids[0]].keys()]
 
             # could be simpler to return these as 1-D tensors - make sure to sort
@@ -205,16 +208,12 @@ def compute_properties(
             raise NotImplementedError()
             # likely identical to density case
         elif entry["tag"] == "enthalpy_of_mixing":
-            import ipdb
-
-            ipdb.set_trace()
+            raise NotImplementedError()
             # figure out the three job IDs necessary from observables, calculate, etc
         elif entry["tag"] == "excess_molar_volume":
             raise NotImplementedError()
         elif entry["tag"] == "enthalpy_of_vaporization":
-            import ipdb
-
-            ipdb.set_trace()
+            raise NotImplementedError()
         else:
             raise ValueError(f"I do not know what to do with {entry['tag']}")
 
@@ -226,12 +225,12 @@ def compute_properties(
 def predict(
     dataset: Dataset,
     force_field: tyff.TensorForceField,
-    base_dir: Path,
+    epoch_dir: Path,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     # in order to get all of the (remote) observables for all simulations run from this
     # dataset, we need the job IDs of these
 
-    with open(base_dir / "target_job_map.json") as f:
+    with open(epoch_dir / "simulations" / "target_job_map.json") as f:
         target_compute_mapping = {tuple(k): v for k, v in json.load(f)}
 
     this_datasets_ids: set[str] = set(entry["id"] for entry in dataset)  # type: ignore
@@ -242,12 +241,12 @@ def predict(
         if target_id in this_datasets_ids:
             job_ids.extend(these_job_ids)
 
-    attached_observables = load_remote_observables(force_field, base_dir, job_ids)
+    attached_observables = load_remote_observables(force_field, epoch_dir, job_ids)
 
     means_and_stds: list[tuple[dict[str, torch.Tensor], dict[str, torch.Tensor]]] = compute_properties(
         dataset=dataset,
         observables=attached_observables,
-        simulation_root=base_dir,
+        epoch_dir=epoch_dir,
     )
 
     ref_values = [entry["value"] for entry in dataset]  # type: ignore
@@ -298,7 +297,7 @@ def main(root: Path) -> None:
 
         simulate(
             force_field=current_ff,
-            root_dir=root / f"EPOCH_{epoch}",
+            epoch_dir=root / f"EPOCH_{epoch}",
             thermo_data=thermo_data,
             n_replicates=N_REPLICATES,
             n_molecules=N_MOLECULES,
@@ -307,7 +306,7 @@ def main(root: Path) -> None:
         predict(
             dataset=thermo_data,
             force_field=current_ff,
-            base_dir=root,
+            epoch_dir=root / f"EPOCH_{epoch}",
         )
         # -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
 
