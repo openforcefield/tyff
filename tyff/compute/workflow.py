@@ -3,6 +3,7 @@ import logging
 import pathlib
 from collections.abc import Sequence
 
+import datasets
 import numpy
 import parsl
 import torch
@@ -87,7 +88,7 @@ class SimulationWorkflow:
     def _submit_compute_batch(
         self,
         compute_configs: Sequence[BaseComputeConfig],
-    ):
+    ) -> list[dict]:
         """Submit many jobs, skipping already-complete ones."""
 
         logger.info(f"Submitting {len(compute_configs)} compute configs to workflow")
@@ -136,9 +137,9 @@ class SimulationWorkflow:
             # them with wait() once everything they want submitted is submitted.
             self._pending.extend(self._submit_compute_batch(compute_configs=this_targets_compute_configs))
 
-    def submit_target_batch(
+    def submit_dataset(
         self,
-        target_configs: Sequence[DataEntry],
+        dataset: datasets.Dataset,  # should be something that unpacks to DataEntry on iteration
         force_field: str,
         n_molecules: int,
         n_replicates: int = 3,
@@ -149,7 +150,8 @@ class SimulationWorkflow:
 
         unique_smiles = set()
 
-        for target in target_configs:
+        for target in dataset:
+            target: DataEntry
             for smiles_ in target["smiles"]:
                 unique_smiles.add(smiles_)
 
@@ -161,12 +163,12 @@ class SimulationWorkflow:
         force_field_ = openff.toolkit.ForceField(force_field)
         for index, unique_smiles_ in enumerate(sorted(unique_smiles)):
             interchange = force_field_.create_interchange(
-                openff.toolkit.Molecule.from_smiles(unique_smiles_).to_topology()
+                openff.toolkit.Molecule.from_mapped_smiles(unique_smiles_).to_topology()
             )
             interchanges.append(interchange)
 
             with open(pathlib.Path(self.base_dir) / "interchanges" / f"interchange_{index}.json", "w") as f:
-                f.write(interchange.model_dump_json())
+                f.write(interchange.model_dump_json(indent=4))
 
         self._reference_force_fields = pathlib.Path(self.base_dir) / "reference_force_fields"
         pathlib.Path(self._reference_force_fields).mkdir(exist_ok=True)
@@ -181,7 +183,7 @@ class SimulationWorkflow:
 
         return [
             result
-            for spec in target_configs
+            for spec in dataset
             if (result := self.submit_target(spec, force_field, n_molecules, n_replicates)) is not None
         ]
 
@@ -263,9 +265,13 @@ class SimulationWorkflow:
         results = []
         for item in pending:
             try:
+                logger.info(f"Calling result() on job with ID {item['job_id']}")
                 result = item["future"].result()
+                logger.info(f"Job with ID {item['job_id']} completed successfully")
                 results.append({"job_id": item["job_id"], "result": result})
             except Exception as e:
+                logger.info(f"Job with ID {item['job_id']} errored with {e!s}!")
+                logger.info(f"current value is: {item=}")
                 results.append({"job_id": item["job_id"], "error": str(e)})
 
         return results
