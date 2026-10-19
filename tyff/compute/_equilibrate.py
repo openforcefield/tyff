@@ -92,13 +92,14 @@ def _run_equilibration(
         if topology.getPeriodicBoxVectors() is not None:
             simulation.context.setPeriodicBoxVectors(*topology.getPeriodicBoxVectors())
 
+    # let pressure be None for gas-phase NVT simulations, including reporting as None to TensorReporter later
     pressure = compute_config.get("pressure", None)
-
-    if pressure is None:
-        raise PressureNotDefinedError("Trying to set up NPT simulation but no pressure defined.")
 
     # only set pressure in liquid NPT simulations, not in gas-phase NVT simulations
     if compute_config["tag"] == "liquid":
+        if pressure is None:
+            raise PressureNotDefinedError("Trying to set up NPT simulation in liquid phase but no pressure defined.")
+
         barostat = openmm.MonteCarloBarostat(
             (pressure * openmm.unit.kilopascal).value_in_unit(openmm.unit.bar),  # pressure in bar
             compute_config["temperature"],  # temperature in kelvin
@@ -141,7 +142,7 @@ def _run_equilibration(
             output_file=files["msgpack_trajectory"].filepath,
             report_interval=1000,
             beta=1.0 / (openmm.unit.MOLAR_GAS_CONSTANT_R * compute_config["temperature"] * openmm.unit.kelvin),
-            pressure=pressure * openmm.unit.kilopascal,
+            pressure=pressure if pressure is None else openmm.unit.kilopascal,
         )
     )
 

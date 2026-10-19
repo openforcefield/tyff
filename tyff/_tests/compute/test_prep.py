@@ -87,4 +87,9 @@ def test_pressure_in_gas_configs(dhvap_entry):
 
     for this_config in compute_configs:
         for val in this_config:
+            # both liquid and gas configs should have a pressure key
             assert "pressure" in val
+
+            # liquid configs must have non-null pressure, gas configs must have None
+            assert (val["tag"] == "liquid") == (val["pressure"] is not None)
+            assert (val["tag"] == "gas") == (val["pressure"] is None)
