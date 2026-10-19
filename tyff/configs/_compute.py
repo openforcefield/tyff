@@ -18,4 +18,4 @@ class BaseComputeConfig(typing_extensions.TypedDict, extra_items=typing.Any):
 
     temperature: float
 
-    pressure: float
+    pressure: float | None

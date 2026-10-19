@@ -91,18 +91,20 @@ def _run_production(
     logger.info("Reinitializing context (in production step)")
     simulation.context.reinitialize(preserveState=True)
 
+    # let pressure be None for gas-phase NVT simulations, including reporting as None to TensorReporter later
+    pressure = compute_config.get("pressure", None)
+
     if compute_config["tag"] == "liquid":
+        if pressure is None:
+            # this clause should already be triggered in _run_equilibration
+            raise PressureNotDefinedError("Trying to set up NPT simulation but no pressure defined.")
+
         # just double check pressure is loaded back in correctly from state
         barostat = next(
             force for force in simulation.system.getForces() if isinstance(force, openmm.MonteCarloBarostat)
         )
 
         assert barostat.getDefaultPressure() is not None
-
-    pressure = compute_config.get("pressure", None)
-
-    if pressure is None:
-        raise PressureNotDefinedError("Trying to set up NPT simulation but no pressure defined.")
 
     simulation.context.setVelocitiesToTemperature(
         compute_config["temperature"],  # kelvin, but as float
