@@ -1,17 +1,21 @@
 import tarfile
+from json import dump
 from pathlib import Path
 
 from datasets import Dataset
 from openff.toolkit import ForceField
 from rich import print
+from torch import no_grad
+from torch.optim import Adam
 
+from tyff._serialization import dump_tensor_force_field
 from tyff.compute._logging import _set_up_logger
 from tyff.converters import topologies_for
 from tyff.targets import energy, thermo
 from tyff.targets.new_thermo import predict, simulate
 from tyff.train import ParameterConfig, Trainable
 
-N_EPOCHS = 1
+N_EPOCHS = 10
 N_REPLICATES = 3
 N_MOLECULES = 200
 INITIAL_FORCE_FIELD = "openff-2.3.0.offxml"
@@ -43,9 +47,11 @@ def main(root: Path) -> None:
 
     logger = _set_up_logger(f"{root}/mvp.log")
 
+    (root / "force_fields").mkdir(exist_ok=True)
+
     thermo_data, energy_data = load_datasets(root)
 
-    _topologies, tensor_ff = topologies_for(
+    topologies, tensor_ff = topologies_for(
         smiles_set={
             *thermo.extract_smiles(thermo_data),
             *energy.extract_smiles(energy_data),
@@ -65,6 +71,7 @@ def main(root: Path) -> None:
         attributes={},
     )
     theta = trainable.to_values().requires_grad_(True)
+    optimizer = Adam([theta], lr=0.01)
 
     for epoch in range(N_EPOCHS):
         current_ff = trainable.to_force_field(theta)
@@ -94,6 +101,34 @@ def main(root: Path) -> None:
         #         1.1028], dtype=torch.float64, grad_fn=<StackBackward0>)
         # y_pred_std=tensor([0.0037, 0.0043, 0.0068, 0.0021, 0.0024, 0.0025, 0.0065, 0.0065, 0.0092,
         #         0.0034], dtype=torch.float64, grad_fn=<StackBackward0>)
+
+        energy_ref, energy_pred, forces_ref, forces_pred = energy.predict(
+            energy_data,
+            current_ff,
+            topologies,
+            normalize=False,
+        )
+
+        loss = (
+            (energy_pred - energy_ref).square().mean()
+            + 0.1 * (forces_pred - forces_ref).square().mean()
+            + (y_pred - y_ref).square().mean()
+        )
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+        with no_grad():
+            theta.copy_(trainable.clamp(theta))
+
+        # probably write out FF and end of each epoch?
+        with open(root / "force_fields" / f"after_EPOCH_{epoch}.ff.json", "w") as f:
+            dump(
+                dump_tensor_force_field(
+                    trainable.to_force_field(theta),
+                ),
+                f,
+                indent=4,
+            )
 
 
 if __name__ == "__main__":
