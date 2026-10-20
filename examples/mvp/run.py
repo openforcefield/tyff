@@ -18,7 +18,7 @@ from tyff.targets import energy, thermo
 from tyff.targets.thermo import DataEntry
 
 N_EPOCHS = 1
-N_REPLICATES = 1
+N_REPLICATES = 3
 N_MOLECULES = 200
 INITIAL_FORCE_FIELD = "openff-2.3.0.offxml"
 
@@ -139,7 +139,7 @@ def load_remote_observables(
     job_id_to_observables = {}
 
     for job_id in job_ids:
-        job_dir = base_dir / job_id
+        job_dir = base_dir / "simulations" / job_id
 
         assert job_dir.exists()
 
@@ -178,27 +178,26 @@ def compute_properties(
     for entry in dataset:  # type: ignore
         entry: DataEntry
         if entry["tag"] == "density":
-            compute_configs_for_target = list()
-
+            # this lookup can be improved, but INITIAL_FORCE_FIELD
+            # gets mutated by this point so it's not so straightforward
             for as_submitted, job_ids in target_compute_mapping.items():
                 if as_submitted[0] == entry["id"]:
-                    compute_configs_for_target.append(job_ids)
+                    break
 
             # this is set with an iteration variable - can we assume that
             # this will be the same for all job_ids within this target?
             # all targets will be the same (i.e. always computing dhvap)
             # but job-to-job maybe not? (i.e. gas vs. liquid jobs)
-
-            types_of_observables = [*observables[job_ids[0]].keys()]
+            types_of_observables = [*observables[job_ids[0][0]].keys()]
 
             # could be simpler to return these as 1-D tensors - make sure to sort
             # keys to avoid ordering issues
             mean: dict[str, torch.Tensor] = {
-                key: torch.stack([observables[job_id][key] for job_id in job_ids]).mean()
+                key: torch.stack([observables[job_id[0]][key] for job_id in job_ids]).mean()
                 for key in types_of_observables
             }
             std: dict[str, torch.Tensor] = {
-                key: torch.stack([observables[job_id][key] for job_id in job_ids]).std()
+                key: torch.stack([observables[job_id[0]][key] for job_id in job_ids]).std()
                 for key in types_of_observables
             }
 
@@ -235,11 +234,18 @@ def predict(
 
     this_datasets_ids: set[str] = set(entry["id"] for entry in dataset)  # type: ignore
 
+    # this needs to be refactored to pass in _targets_, not jobs.
+    # synonymous with pure density, but for others (dhmix, dhvap, etc.) need to
+    # collect information from multiple jobs (i.e. gas and liquid jobs for dhvap)
+    # and condense down to one value (dhvap) to be reported
     job_ids: list[str] = list()
 
     for (target_id, _, _, _), these_job_ids in target_compute_mapping.items():
         if target_id in this_datasets_ids:
             job_ids.extend(these_job_ids)
+
+    # see comment above
+    job_ids = [x[0] for x in job_ids]
 
     attached_observables = load_remote_observables(force_field, epoch_dir, job_ids)
 
@@ -295,6 +301,7 @@ def main(root: Path) -> None:
     for epoch in range(N_EPOCHS):
         current_ff = trainable.to_force_field(theta)
 
+        # no return value?
         simulate(
             force_field=current_ff,
             epoch_dir=root / f"EPOCH_{epoch}",
@@ -303,14 +310,13 @@ def main(root: Path) -> None:
             n_molecules=N_MOLECULES,
         )
 
-        predict(
+        y_ref, y_ref_std, y_pred, y_pred_std = predict(
             dataset=thermo_data,
             force_field=current_ff,
             epoch_dir=root / f"EPOCH_{epoch}",
         )
-        # -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
 
-    return
+        print(y_ref, y_ref_std, y_pred, y_pred_std)
 
 
 if __name__ == "__main__":
