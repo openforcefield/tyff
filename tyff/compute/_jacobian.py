@@ -22,10 +22,17 @@ def _gather_from_reference(local: tyff.TensorForceField, reference: tyff.TensorF
 
     for potential in local.potentials:
         ref = reference_by_type[potential.handler_type]  # KeyError: potential type missing from reference
-        assert potential.parameter_cols == ref.parameter_cols, potential.handler_type
+        assert potential.parameter_cols == ref.parameter_cols, (
+            f"parameter_cols doesn't match in potential {potential.handler_type=}"
+        )
 
         ref_idx = {key: i for i, key in enumerate(ref.parameter_keys)}
-        idx = torch.tensor([ref_idx[key] for key in potential.parameter_keys])  # KeyError: unseen parameter
+        try:
+            idx = torch.tensor([ref_idx[key] for key in potential.parameter_keys])  # KeyError: unseen parameter
+        except KeyError as error:
+            raise KeyError(
+                f"Parameter key {error} in local potential {potential.handler_type} not found in reference"
+            ) from error
 
         attributes = potential.attributes
         if potential.attribute_cols is not None:

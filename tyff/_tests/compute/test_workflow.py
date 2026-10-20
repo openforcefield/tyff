@@ -15,3 +15,5 @@ class TestSimulationWorkflow:
                 assert str(tmp_path) in lines[0]
 
             parsl.clear()
+
+        assert (tmp_path / "target_job_map.json").exists()

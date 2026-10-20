@@ -2,36 +2,19 @@ import tarfile
 from pathlib import Path
 
 from datasets import Dataset
-from openff.toolkit import ForceField, Molecule
+from openff.toolkit import ForceField
+from rich import print
 
-import tyff
-import tyff.converters
-import tyff.train
 from tyff.compute._logging import _set_up_logger
-from tyff.compute.configs import local_config
-from tyff.compute.workflow import SimulationWorkflow
-from tyff.converters.openff._tensors import convert_tensor_force_field
+from tyff.converters import topologies_for
 from tyff.targets import energy, thermo
+from tyff.targets.new_thermo import predict, simulate
+from tyff.train import ParameterConfig, Trainable
 
 N_EPOCHS = 1
-N_REPLICATES = 1
+N_REPLICATES = 3
 N_MOLECULES = 200
 INITIAL_FORCE_FIELD = "openff-2.3.0.offxml"
-
-
-def topologies_for(
-    smiles_set: set[str],
-    smirnoff_force_field: ForceField,
-) -> tuple[dict[str, tyff.TensorTopology], tyff.TensorForceField]:
-    # this function is maybe meant to be surely there is a more straightforward way to do this?
-    interchanges = [
-        smirnoff_force_field.create_interchange(Molecule.from_mapped_smiles(smiles).to_topology())
-        for smiles in smiles_set
-    ]
-
-    tensor_ff, topologies = tyff.converters.convert_interchange(interchanges)
-
-    return {smiles: topology for smiles, topology in zip(smiles_set, topologies)}, tensor_ff
 
 
 def load_datasets(root: Path) -> tuple[Dataset, Dataset]:
@@ -47,68 +30,12 @@ def load_datasets(root: Path) -> tuple[Dataset, Dataset]:
     thermo_data = Dataset.load_from_disk(root / "data/thermo")
     energy_data = Dataset.load_from_disk(root / "data/energy")
 
+    # temporary - need to go back and add dhmix, dhvap, etc.
+    thermo_data = thermo_data.filter(lambda x: x["tag"] == "density")
+
     logger.info(f"Loaded {len(thermo_data)} thermo entries and {len(energy_data)} energy entries")
 
     return thermo_data, energy_data
-
-
-def simulate(
-    force_field: tyff.TensorForceField,
-    root_dir: Path,
-    thermo_data: Dataset,
-    n_molecules: int,
-    n_replicates: int,
-) -> None:
-    """
-    Simulate the given force field using the provided thermo data.
-
-    This is meant to be used inside of a training loop.
-
-    Parameters
-    ----------
-    force_field : tyff.TensorForceField
-        The force field to be used in the simulation.
-    root_dir : Path
-        The root directory where simulation results will be stored.
-    thermo_data : Dataset
-        The dataset containing thermodynamic data for the simulation.
-    n_molecules : int
-        The number of molecules to simulate.
-    n_replicates : int
-        The number of replicates for each simulation.
-
-    Returns
-    -------
-    None
-    """
-
-    # write out this epoch's (tensor) force field as a SMIRNOFF force field
-    current_smirnoff_force_field = convert_tensor_force_field(
-        original_force_field=ForceField(INITIAL_FORCE_FIELD),
-        tensor_force_field=force_field,
-    )
-
-    logger.info("Making directory for this epoch's simulations")
-    root_dir.mkdir(exist_ok=True)
-
-    logger.info("Writing out the current SMIRNOFF force field to file")
-    smirnoff_force_field_file = str(root_dir / "current_force_field.offxml")
-    current_smirnoff_force_field.to_file(smirnoff_force_field_file)
-
-    logger.info("Setting up simulation workflow")
-    with SimulationWorkflow(
-        base_dir=str(root_dir / "simulations"),
-        parsl_config=local_config(max_workers=8),
-    ) as workflow:
-        logger.info("Submitting dataset")
-        workflow.submit_dataset(
-            dataset=thermo_data,
-            force_field=smirnoff_force_field_file,
-            n_molecules=n_molecules,
-            n_replicates=n_replicates,
-        )
-
-        workflow.wait()
 
 
 def main(root: Path) -> None:
@@ -118,8 +45,6 @@ def main(root: Path) -> None:
 
     thermo_data, energy_data = load_datasets(root)
 
-    # should this be convert_interchanges?
-    # is `topologies` list[tyff.TensorTopology] or dict[str, tyff.TensorTopology]?
     _topologies, tensor_ff = topologies_for(
         smiles_set={
             *thermo.extract_smiles(thermo_data),
@@ -128,10 +53,10 @@ def main(root: Path) -> None:
         smirnoff_force_field=ForceField(INITIAL_FORCE_FIELD),
     )
 
-    trainable = tyff.train.Trainable(
+    trainable = Trainable(
         tensor_ff,
         parameters={
-            "vdW": tyff.train.ParameterConfig(
+            "vdW": ParameterConfig(  # type: ignore
                 cols=["epsilon", "sigma"],
                 scales={"epsilon": 10.0, "sigma": 1.0},
                 limits={"epsilon": (0.0001, None), "sigma": (0.5, None)},
@@ -144,15 +69,31 @@ def main(root: Path) -> None:
     for epoch in range(N_EPOCHS):
         current_ff = trainable.to_force_field(theta)
 
+        # no return value?
         simulate(
             force_field=current_ff,
-            root_dir=root / f"EPOCH_{epoch}",
+            epoch_dir=root / f"EPOCH_{epoch}",
             thermo_data=thermo_data,
+            smirnoff_force_field=ForceField(INITIAL_FORCE_FIELD),
             n_replicates=N_REPLICATES,
             n_molecules=N_MOLECULES,
         )
 
-    return
+        y_ref, y_ref_std, y_pred, y_pred_std = predict(
+            dataset=thermo_data,
+            force_field=current_ff,
+            epoch_dir=root / f"EPOCH_{epoch}",
+        )
+
+        print(f"{y_ref=}\n{y_ref_std=}\n{y_pred=}\n{y_pred_std=}\n")
+        # y_ref=tensor([0.8736, 0.8060, 1.1335, 0.8579, 0.8215, 0.8375, 0.8543, 1.0950, 1.1203,
+        #         1.1290])
+        # y_ref_std=tensor([4.0000e-05, 5.7000e-05, 5.0000e-04, 3.3500e-04, 1.1150e-04, 1.0100e-04,
+        #         9.1000e-05, 1.5000e-04, 3.5000e-04, 1.0000e-03])
+        # y_pred=tensor([0.8859, 0.7895, 1.1050, 0.8637, 0.8140, 0.8355, 0.8586, 1.0800, 1.0986,
+        #         1.1028], dtype=torch.float64, grad_fn=<StackBackward0>)
+        # y_pred_std=tensor([0.0037, 0.0043, 0.0068, 0.0021, 0.0024, 0.0025, 0.0065, 0.0065, 0.0092,
+        #         0.0034], dtype=torch.float64, grad_fn=<StackBackward0>)
 
 
 if __name__ == "__main__":

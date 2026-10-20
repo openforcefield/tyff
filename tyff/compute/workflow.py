@@ -52,7 +52,17 @@ class SimulationWorkflow:
 
         # at scale these should become databases or something more robust
         self._targets = dict()
-        self._target_compute_mapping: dict[tuple[int, str, int, int], list[tuple[str, ...]]] = dict()
+
+        target_job_map_path = pathlib.Path(self.base_dir) / "simulations" / "target_job_map.json"
+        if target_job_map_path.exists():
+            with open(target_job_map_path) as f:
+                # don't overwrite this if it already exists
+                loaded_mapping = {tuple(k): v for k, v in json.load(f).items()}
+                if len(loaded_mapping) > 0:
+                    self._target_compute_mapping = loaded_mapping
+        else:
+            # initialize to empty dict otherwise
+            self._target_compute_mapping: dict[tuple[str, str, int, int], list[tuple[str, ...]]] = dict()
 
         # futures submitted via submit_target/submit_target_batch that haven't
         # been waited on yet; drained by wait()
@@ -123,11 +133,23 @@ class SimulationWorkflow:
         )
 
         # track targets (+ other arg) mapped to compute runs (as job_id) so we can look up results later
-        self._target_compute_mapping[(target_config["id"], force_field, n_molecules, n_replicates)] = list()
-        for this_targets_compute_configs in compute_configs:
-            self._target_compute_mapping[(target_config["id"], force_field, n_molecules, n_replicates)].append(
-                tuple([make_job_id(compute_config) for compute_config in this_targets_compute_configs])
+        self._target_compute_mapping[
+            (
+                target_config["id"],  # this is unmodified from input data and therefore could look funky
+                force_field,
+                n_molecules,
+                n_replicates,
             )
+        ] = list()
+        for this_targets_compute_configs in compute_configs:
+            self._target_compute_mapping[
+                (
+                    target_config["id"],
+                    force_field,
+                    n_molecules,
+                    n_replicates,
+                )
+            ].append(tuple([make_job_id(compute_config) for compute_config in this_targets_compute_configs]))
 
             # submit each compute job without blocking - can be >1 compute job per property.
             # NOTE: this used to call self.run(...), which calls .result() on every
@@ -147,6 +169,21 @@ class SimulationWorkflow:
         import openff.toolkit
 
         from tyff._serialization import dump_tensor_force_field
+
+        # save these targets since they're probably going to be needed later
+        (pathlib.Path(self.base_dir) / "thermo_targets").mkdir(exist_ok=True)
+
+        if (pathlib.Path(self.base_dir) / "thermo_targets" / "targets.json").exists():
+            with open(pathlib.Path(self.base_dir) / "thermo_targets" / "targets.json") as f:
+                targets = json.load(f)
+        else:
+            targets = list()
+
+        # list-ify dicts, which should quack like `DataEntry`s, via iterating over datasets
+        targets.extend([*dataset])
+
+        with open(pathlib.Path(self.base_dir) / "thermo_targets" / "targets.json", "w") as f:
+            json.dump(targets, f, indent=4)
 
         unique_smiles = set()
 
@@ -171,15 +208,32 @@ class SimulationWorkflow:
                 f.write(interchange.model_dump_json(indent=4))
 
         self._reference_force_fields = pathlib.Path(self.base_dir) / "reference_force_fields"
-        pathlib.Path(self._reference_force_fields).mkdir(exist_ok=True)
+        self._reference_force_fields.mkdir(exist_ok=True)
 
+        assert self._reference_force_fields.exists()
+        assert self._reference_force_fields.is_dir()
+
+        logger.info(f"Made a path to store reference force fields at {self._reference_force_fields}")
         # this is a "global"/reference force field composed from all unique molecules,
         # don't think we're going to use the topologies here
         reference_force_field, _tensor_topologies = tyff.converters.convert_interchange(interchanges)
 
+        # make sure this is not empty
+        assert len(reference_force_field.potentials) > 0
+
+        logger.info(
+            "Writing reference force field from path (which is probably outside of "
+            f"this workflow's root): {force_field=}"
+            f"to path {self._reference_force_fields / 'reference.json'}"
+        )
+
         # dumps a JSON representation of the tensor representation of the SMIRNOFF force field
-        with open(self._reference_force_fields / f"{force_field}.json", "w") as f:
-            json.dump(dump_tensor_force_field(reference_force_field), f)
+        with open(self._reference_force_fields / "reference.json", "w") as f:
+            json.dump(
+                dump_tensor_force_field(reference_force_field),
+                f,
+                indent=4,
+            )
 
         return [
             result
@@ -255,6 +309,14 @@ class SimulationWorkflow:
         made, so Parsl can actually run them concurrently in the meantime.
         Returns results/errors per job and clears the pending queue.
         """
+        with open(pathlib.Path(self.base_dir) / "target_job_map.json", "w") as f:
+            json.dump(
+                # keys are tuples, so just serialize key-val pairs as lists
+                [[list(k), v] for k, v in self._target_compute_mapping.items()],
+                f,
+                indent=4,
+            )
+
         results = self._drain(self._pending)
         self._pending = []
         return results
@@ -351,7 +413,9 @@ class SimulationWorkflow:
         jacobian_future = create_jacobian(
             production_future=production_future,
             job_dir=job_dir,
-            reference_force_field_path=self._reference_force_fields / f"{compute_config['force_field']}.json",
+            # pathing here is weird, but there should only be one global reference
+            # force field for this workflow
+            reference_force_field_path=self._reference_force_fields / "reference.json",
         )
 
         return {"job_id": job_id, "future": jacobian_future}
