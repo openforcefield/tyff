@@ -5,6 +5,7 @@ from pathlib import Path
 import torch
 from datasets import Dataset
 from openff.toolkit import ForceField, Molecule
+from rich import print
 
 import tyff
 import tyff.converters
@@ -262,8 +263,8 @@ def predict(
 
     ref_values = torch.tensor(ref_values)
     ref_stds = torch.tensor(ref_stds)
-    predicted_values = torch.tensor(predicted_values)
-    predicted_stds = torch.tensor(predicted_stds)
+    predicted_values = torch.stack(predicted_values)
+    predicted_stds = torch.stack(predicted_stds)
 
     return ref_values, ref_stds, predicted_values, predicted_stds
 
@@ -316,7 +317,15 @@ def main(root: Path) -> None:
             epoch_dir=root / f"EPOCH_{epoch}",
         )
 
-        print(y_ref, y_ref_std, y_pred, y_pred_std)
+        print(f"{y_ref=}\n{y_ref_std=}\n{y_pred=}\n{y_pred_std=}\n")
+        # y_ref=tensor([0.8736, 0.8060, 1.1335, 0.8579, 0.8215, 0.8375, 0.8543, 1.0950, 1.1203,
+        #         1.1290])
+        # y_ref_std=tensor([4.0000e-05, 5.7000e-05, 5.0000e-04, 3.3500e-04, 1.1150e-04, 1.0100e-04,
+        #         9.1000e-05, 1.5000e-04, 3.5000e-04, 1.0000e-03])
+        # y_pred=tensor([0.8859, 0.7895, 1.1050, 0.8637, 0.8140, 0.8355, 0.8586, 1.0800, 1.0986,
+        #         1.1028], dtype=torch.float64, grad_fn=<StackBackward0>)
+        # y_pred_std=tensor([0.0037, 0.0043, 0.0068, 0.0021, 0.0024, 0.0025, 0.0065, 0.0065, 0.0092,
+        #         0.0034], dtype=torch.float64, grad_fn=<StackBackward0>)
 
 
 if __name__ == "__main__":
