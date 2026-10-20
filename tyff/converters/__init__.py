@@ -4,6 +4,7 @@ from tyff.converters.openff import (
     convert_handlers,
     convert_interchange,
     smirnoff_parameter_converter,
+    topologies_for,
 )
 from tyff.converters.openff._tensors import convert_tensor_force_field
 from tyff.converters.openmm import (
@@ -24,4 +25,5 @@ __all__ = [
     "convert_to_openmm_topology",
     "ffxml_converter",
     "smirnoff_parameter_converter",
+    "topologies_for",
 ]
