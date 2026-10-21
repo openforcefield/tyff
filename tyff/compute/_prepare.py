@@ -43,7 +43,7 @@ def _prepare_openmm_system(
 
     packed_topology: Topology = Topology.from_pdb(
         file_path=packing_files["packed_topology"].filepath,
-        unique_molecules=[Molecule.from_smiles(smiles) for smiles in compute_config["smiles"]],
+        unique_molecules=[Molecule.from_mapped_smiles(smiles) for smiles in compute_config["smiles"]],
     )
 
     force_field = ForceField(compute_config["force_field"])
@@ -55,14 +55,14 @@ def _prepare_openmm_system(
     #
     # ordering is quite fragile, but hope order of smiles list never changes mid-job
     for unique_molecule_index, unique_molecule in enumerate(
-        [Molecule.from_smiles(smiles) for smiles in compute_config["smiles"]]
+        [Molecule.from_mapped_smiles(smiles) for smiles in compute_config["smiles"]]
     ):
         single_molecule_interchange = force_field.create_interchange(unique_molecule.to_topology())
         with open(f"{job_dir}/single_molecule_interchange_{unique_molecule_index}.json", "w") as f:
-            f.write(single_molecule_interchange.model_dump_json())
+            f.write(single_molecule_interchange.model_dump_json(indent=4))
 
     with open(files["interchange"].filepath, "w") as f:
-        f.write(interchange.model_dump_json())
+        f.write(interchange.model_dump_json(indent=4))
 
     openmm_system = interchange.to_openmm()
 

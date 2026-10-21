@@ -164,6 +164,7 @@ def _make_enthalpy_of_vaporization_compute_configs(
                         smiles=data_entry["smiles"],
                         x=data_entry["x"],
                         temperature=data_entry["temperature"],
+                        pressure=None,  # should *always* be None, but not validated in the model
                     ),
                 )
             )

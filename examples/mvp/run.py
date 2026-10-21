@@ -1,79 +1,100 @@
-import socket
+import tarfile
+from pathlib import Path
 
-import parsl
+from datasets import Dataset
+from openff.toolkit import ForceField
+from rich import print
 
-from tyff.compute.configs import hpc3_config, local_config
-from tyff.compute.workflow import SimulationWorkflow
-from tyff.targets.thermo import DataEntry
+from tyff.compute._logging import _set_up_logger
+from tyff.converters import topologies_for
+from tyff.targets import energy, thermo
+from tyff.targets.new_thermo import predict, simulate
+from tyff.train import ParameterConfig, Trainable
 
-# 1. Establish target data
-targets = [
-    DataEntry(**data)
-    for data in [
-        {
-            "id": 74669191270958899039426367776551206167278900382279422138348522811937124722445,
-            "tag": "density",
-            "smiles": ["COCCO"],
-            "x": [1.0],
-            "temperature": 293.15,
-            "pressure": 101.3,
-            "value": 0.9648800000000002,
-            "std": 5.0000000000000016e-05,
-            "units": "gram / milliliter",
-            "source": "",
+N_EPOCHS = 1
+N_REPLICATES = 3
+N_MOLECULES = 200
+INITIAL_FORCE_FIELD = "openff-2.3.0.offxml"
+
+
+def load_datasets(root: Path) -> tuple[Dataset, Dataset]:
+    """Load datasets stored at data/*.tar.gz"""
+    if not (root / "data/energy").exists():
+        with tarfile.open(root / "data/energy.tar.gz", "r:gz") as tar:
+            tar.extractall(path=root / "data/", filter="data")
+
+    if not (root / "data/thermo").exists():
+        with tarfile.open(root / "data/thermo.tar.gz", "r:gz") as tar:
+            tar.extractall(path=root / "data/", filter="data")
+
+    thermo_data = Dataset.load_from_disk(root / "data/thermo")
+    energy_data = Dataset.load_from_disk(root / "data/energy")
+
+    # temporary - need to go back and add dhmix, dhvap, etc.
+    thermo_data = thermo_data.filter(lambda x: x["tag"] == "density")
+
+    logger.info(f"Loaded {len(thermo_data)} thermo entries and {len(energy_data)} energy entries")
+
+    return thermo_data, energy_data
+
+
+def main(root: Path) -> None:
+    global logger
+
+    logger = _set_up_logger(f"{root}/mvp.log")
+
+    thermo_data, energy_data = load_datasets(root)
+
+    _topologies, tensor_ff = topologies_for(
+        smiles_set={
+            *thermo.extract_smiles(thermo_data),
+            *energy.extract_smiles(energy_data),
         },
-        {
-            "id": 4455979010545387927019552539812888795231031600148607549210198983695932067156,
-            "tag": "enthalpy_of_vaporization",
-            "smiles": ["Fc1ccccc1Cl"],
-            "x": [1.0],
-            "temperature": 298.15,
-            "pressure": None,
-            "value": 10.51625239005736,
-            "std": 0.14340344168260036,
-            "units": "kcal/mol",
-            "source": "10.1016/j.fluid.2014.12.023",
+        smirnoff_force_field=ForceField(INITIAL_FORCE_FIELD),
+    )
+
+    trainable = Trainable(
+        tensor_ff,
+        parameters={
+            "vdW": ParameterConfig(  # type: ignore
+                cols=["epsilon", "sigma"],
+                scales={"epsilon": 10.0, "sigma": 1.0},
+                limits={"epsilon": (0.0001, None), "sigma": (0.5, None)},
+            )
         },
-    ]
-]
+        attributes={},
+    )
+    theta = trainable.to_values().requires_grad_(True)
 
-job_specs = list()
+    for epoch in range(N_EPOCHS):
+        current_ff = trainable.to_force_field(theta)
 
-base_dir = "mvp_jobs"
-
-# 2. Run (compute) jobs
-if "hpc3" in socket.gethostname():
-    # production runs on HPC3 (SLURM cluster with GPUs)
-    with SimulationWorkflow(
-        base_dir,
-        hpc3_config(
-            partition="gpu",
-            account="dmobley_lab_gpu",
-        ),
-    ) as workflow:
-        workflow.submit_target_batch(
-            targets,
-            force_field="openff-2.3.0.offxml",
-            n_molecules=200,
-            n_replicates=5,
+        # no return value?
+        simulate(
+            force_field=current_ff,
+            epoch_dir=root / f"EPOCH_{epoch}",
+            thermo_data=thermo_data,
+            smirnoff_force_field=ForceField(INITIAL_FORCE_FIELD),
+            n_replicates=N_REPLICATES,
+            n_molecules=N_MOLECULES,
         )
 
-else:
-    # local testing
-    with SimulationWorkflow(
-        base_dir,
-        local_config(max_workers=10),
-    ) as workflow:
-        workflow.submit_target_batch(
-            targets,
-            force_field="openff-2.3.0.offxml",
-            n_molecules=200,
-            n_replicates=3,
+        y_ref, y_ref_std, y_pred, y_pred_std = predict(
+            dataset=thermo_data,
+            force_field=current_ff,
+            epoch_dir=root / f"EPOCH_{epoch}",
         )
 
+        print(f"{y_ref=}\n{y_ref_std=}\n{y_pred=}\n{y_pred_std=}\n")
+        # y_ref=tensor([0.8736, 0.8060, 1.1335, 0.8579, 0.8215, 0.8375, 0.8543, 1.0950, 1.1203,
+        #         1.1290])
+        # y_ref_std=tensor([4.0000e-05, 5.7000e-05, 5.0000e-04, 3.3500e-04, 1.1150e-04, 1.0100e-04,
+        #         9.1000e-05, 1.5000e-04, 3.5000e-04, 1.0000e-03])
+        # y_pred=tensor([0.8859, 0.7895, 1.1050, 0.8637, 0.8140, 0.8355, 0.8586, 1.0800, 1.0986,
+        #         1.1028], dtype=torch.float64, grad_fn=<StackBackward0>)
+        # y_pred_std=tensor([0.0037, 0.0043, 0.0068, 0.0021, 0.0024, 0.0025, 0.0065, 0.0065, 0.0092,
+        #         0.0034], dtype=torch.float64, grad_fn=<StackBackward0>)
 
-try:
-    parsl.clear()
-    parsl.dfk().cleanup()
-except Exception:
-    pass
+
+if __name__ == "__main__":
+    main(root=Path(__file__).resolve().parent)

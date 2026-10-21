@@ -494,3 +494,18 @@ def convert_interchange(
 
     tensor_force_field = tyff.TensorForceField(potentials, v_sites)
     return tensor_force_field, tensor_topologies
+
+
+def topologies_for(
+    smiles_set: set[str],
+    smirnoff_force_field: openff.toolkit.ForceField,
+) -> tuple[dict[str, tyff.TensorTopology], tyff.TensorForceField]:
+    # this function is maybe meant to be surely there is a more straightforward way to do this?
+    interchanges = [
+        smirnoff_force_field.create_interchange(openff.toolkit.Molecule.from_mapped_smiles(smiles).to_topology())
+        for smiles in smiles_set
+    ]
+
+    tensor_ff, topologies = convert_interchange(interchanges)
+
+    return {smiles: topology for smiles, topology in zip(smiles_set, topologies)}, tensor_ff
