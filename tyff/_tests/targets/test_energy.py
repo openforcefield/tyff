@@ -354,9 +354,9 @@ def test_predict_v_sites(mock_hoh_dimer_entry):
     _, energy_pred, _, forces_pred = predict(create_dataset([mock_hoh_dimer_entry]), force_field, {smiles: topology})
 
     # Make sure that the energies and forces are non-zero before summing
-    assert all(energy_pred.abs() > 0.0)
-    assert all(forces_pred.abs().flatten() > 0.0)
-    
+    assert (energy_pred != 0.0).all()
+    assert (forces_pred != 0.0).all()
+
     # both the energy and force paths must reach the v-site parameters. The energies
     # are squared as they are mean-subtracted, so their plain sum is always 0.
     (energy_grad,) = torch.autograd.grad(energy_pred.square().sum(), force_field.v_sites.parameters, retain_graph=True)
