@@ -41,6 +41,29 @@ def mock_hoh_entry() -> Entry:
     }
 
 
+@pytest.fixture
+def mock_hoh_dimer_entry() -> Entry:
+    # two waters are needed to test v-sites: a single TIP4P-FB water has zero energy
+    # for any geometry (constraints only, all intramolecular pairs excluded)
+
+    # O, H, H in the xy plane, close to TIP4P-FB geometry
+    water = torch.tensor([[0.0, 0.0, 0.0], [-0.76, 0.59, 0.0], [0.76, 0.59, 0.0]])
+
+    # geometry 1: second water shifted 3 Å along z
+    water_b_1 = water + torch.tensor([0.0, 0.0, 3.0])
+
+    # geometry 2: second water rotated by (x, y, z) -> (z, -y, x), shifted 2.8 Å along x
+    water_b_2 = water.flip(-1) * torch.tensor([1.0, -1.0, 1.0]) + torch.tensor([2.8, 0.0, 0.0])
+
+    return {
+        "smiles": "[H:2][O:1][H:3].[H:5][O:4][H:6]",
+        # (n_confs=2, n_atoms=6, 3), atom-only
+        "coords": torch.stack([torch.cat([water, water_b_1]), torch.cat([water, water_b_2])]),
+        "energy": torch.tensor([2.0, 3.0]),
+        "forces": torch.arange(36, dtype=torch.float32).reshape(2, 6, 3),
+    }
+
+
 @pytest.mark.parametrize(
     "box_vectors",
     [None, torch.eye(3).repeat(2, 1, 1) * 20.0],
@@ -105,7 +128,8 @@ def test_extract_smiles(mock_meoh_entry, mock_hoh_entry):
 @pytest.mark.parametrize(
     "box_vectors, reference, normalize,"
     "expected_energy_ref, expected_forces_ref, "
-    "expected_energy_pred, expected_forces_pred",
+    "expected_energy_pred, expected_forces_pred, "
+    "entry_name, force_field_name",
     [
         pytest.param(
             None,
@@ -137,6 +161,8 @@ def test_extract_smiles(mock_meoh_entry, mock_hoh_entry):
                 dtype=torch.float64,
             )
             / math.sqrt(6.0 * 3.0),
+            "mock_hoh_entry",
+            "openff_unconstrained-1.3.0.offxml",
             id="non-periodic-mean-normalized",
         ),
         pytest.param(
@@ -167,6 +193,8 @@ def test_extract_smiles(mock_meoh_entry, mock_hoh_entry):
                 ],
                 dtype=torch.float64,
             ),
+            "mock_hoh_entry",
+            "openff_unconstrained-1.3.0.offxml",
             id="non-periodic-min",
         ),
         pytest.param(
@@ -198,6 +226,8 @@ def test_extract_smiles(mock_meoh_entry, mock_hoh_entry):
                 ],
                 dtype=torch.float64,
             ),
+            "mock_hoh_entry",
+            "openff_unconstrained-1.3.0.offxml",
             id="periodic-mean-normalized",
         ),
         pytest.param(
@@ -228,7 +258,38 @@ def test_extract_smiles(mock_meoh_entry, mock_hoh_entry):
                 ],
                 dtype=torch.float64,
             ),
+            "mock_hoh_entry",
+            "openff_unconstrained-1.3.0.offxml",
             id="periodic-min",
+        ),
+        pytest.param(
+            None,
+            "mean",
+            True,
+            torch.tensor([-0.5, 0.5]) / math.sqrt(2.0),
+            torch.arange(36, dtype=torch.float64).reshape(12, 3) / math.sqrt(12.0 * 3.0),
+            torch.tensor([4.242203712463379, -4.242203712463379]) / math.sqrt(2.0),
+            torch.tensor(
+                [
+                    [0.0, 5.792387, -7.558908],
+                    [0.871478, -2.896193, 0.036511],
+                    [-0.871478, -2.896193, 0.036511],
+                    [0.0, 5.792387, 7.558908],
+                    [0.871478, -2.896193, -0.036511],
+                    [-0.871478, -2.896193, -0.036511],
+                    [-16.529013, -6.123506, 0.0],
+                    [1.342896, 1.191738, 0.0],
+                    [12.059071, 1.518323, 0.0],
+                    [6.345163, 11.937330, 0.0],
+                    [-1.609060, -4.261943, -0.585875],
+                    [-1.609060, -4.261943, 0.585874],
+                ],
+                dtype=torch.float64,
+            )
+            / math.sqrt(12.0 * 3.0),
+            "mock_hoh_dimer_entry",
+            "tip4p_fb.offxml",
+            id="v-sites-mean-normalized",
         ),
     ],
 )
@@ -240,20 +301,22 @@ def test_predict(
     expected_forces_ref,
     expected_energy_pred,
     expected_forces_pred,
-    mock_hoh_entry,
+    entry_name,
+    force_field_name,
+    request,
 ):
-    entry = {**mock_hoh_entry}
+    entry = {**request.getfixturevalue(entry_name)}
     if box_vectors is not None:
         entry["box_vectors"] = box_vectors
     dataset = create_dataset([entry])
 
     force_field, [topology] = tyff.converters.convert_interchange(
         openff.interchange.Interchange.from_smirnoff(
-            openff.toolkit.ForceField("openff_unconstrained-1.3.0.offxml"),
-            openff.toolkit.Molecule.from_mapped_smiles(mock_hoh_entry["smiles"]).to_topology(),
+            openff.toolkit.ForceField(force_field_name),
+            openff.toolkit.Molecule.from_mapped_smiles(entry["smiles"]).to_topology(),
         )
     )
-    topologies = {mock_hoh_entry["smiles"]: topology}
+    topologies = {entry["smiles"]: topology}
 
     energy_ref, energy_pred, forces_ref, forces_pred = predict(
         dataset, force_field, topologies, reference=reference, normalize=normalize
@@ -265,6 +328,47 @@ def test_predict(
     assert torch.allclose(energy_ref, expected_energy_ref)
 
     assert forces_pred.shape == expected_forces_pred.shape
-    assert torch.allclose(forces_pred, expected_forces_pred)
+    # atol needed as some expected forces are rounded, or set to 0.0 in place of float32 noise
+    assert torch.allclose(forces_pred, expected_forces_pred, atol=1.0e-5)
     assert forces_ref.shape == expected_forces_ref.shape
     assert torch.allclose(forces_ref, expected_forces_ref)
+
+
+def test_predict_v_sites(mock_hoh_dimer_entry):
+    """Test that the v-site parameters receive gradients through ``predict``, and
+    that coordinates which already include v-sites are rejected. The predicted values
+    themselves are checked by ``test_predict``."""
+    smiles = mock_hoh_dimer_entry["smiles"]
+
+    force_field, [topology] = tyff.converters.convert_interchange(
+        openff.interchange.Interchange.from_smirnoff(
+            openff.toolkit.ForceField("tip4p_fb.offxml"),
+            openff.toolkit.Molecule.from_mapped_smiles(smiles).to_topology(),
+        )
+    )
+    assert topology.v_sites is not None
+    # needed to check the v-site parameter gradients below (in training,
+    # Trainable.to_force_field provides parameters that already require grad)
+    force_field.v_sites.parameters.requires_grad_(True)
+
+    _, energy_pred, _, forces_pred = predict(create_dataset([mock_hoh_dimer_entry]), force_field, {smiles: topology})
+
+    # Make sure that the energies and forces are non-zero before summing
+    assert (energy_pred != 0.0).all()
+    assert (forces_pred != 0.0).all()
+
+    # both the energy and force paths must reach the v-site parameters. The energies
+    # are squared as they are mean-subtracted, so their plain sum is always 0.
+    (energy_grad,) = torch.autograd.grad(energy_pred.square().sum(), force_field.v_sites.parameters, retain_graph=True)
+    (forces_grad,) = torch.autograd.grad(forces_pred.square().sum(), force_field.v_sites.parameters)
+    assert energy_grad.abs().sum() > 0.0
+    assert forces_grad.abs().sum() > 0.0
+
+    # coords that already include v-sites would get them appended twice
+    particle_coords = tyff.geometry.add_v_site_coords(
+        topology.v_sites, mock_hoh_dimer_entry["coords"].double(), force_field
+    ).detach()
+    dataset_v_sites = create_dataset([{**mock_hoh_dimer_entry, "coords": particle_coords}])
+
+    with pytest.raises(ValueError, match="should not include virtual sites"):
+        predict(dataset_v_sites, force_field, {smiles: topology})
