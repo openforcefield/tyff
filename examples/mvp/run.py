@@ -15,7 +15,7 @@ from tyff.targets.new_thermo import predict, simulate
 from tyff.train import ParameterConfig, Trainable
 
 N_EPOCHS = 10
-N_REPLICATES = 3
+N_REPLICATES = 2
 N_MOLECULES = 200
 INITIAL_FORCE_FIELD = "openff-2.3.0.offxml"
 
@@ -89,7 +89,7 @@ def main(root: Path) -> None:
             n_molecules=N_MOLECULES,
         )
 
-        y_ref, y_ref_std, y_pred, y_pred_std = predict(
+        y_ref, _y_ref_std, y_pred, _y_pred_std = predict(
             dataset=thermo_data,
             force_field=current_ff,
             epoch_dir=root / f"EPOCH_{epoch}",
@@ -108,8 +108,17 @@ def main(root: Path) -> None:
             + (y_pred - y_ref).square().mean()
         )
 
-        optimizer.step()
+        logger.info(f"EPOCH {epoch}: loss={loss.item():.6f}")
+
         optimizer.zero_grad()
+
+        loss.backward()
+        # ipdb> loss.backward()
+        # *** RuntimeError: Function RemoteEnsembleAverageBackward returned an invalid gradient at
+        # index 2 - got [208] but expected shape compatible with [287]
+
+        optimizer.step()
+
         with no_grad():
             theta.copy_(trainable.clamp(theta))
 
