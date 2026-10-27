@@ -19,6 +19,8 @@ N_REPLICATES = 2
 N_MOLECULES = 200
 INITIAL_FORCE_FIELD = "openff-2.3.0.offxml"
 
+MERGE_DATA = False
+
 
 def load_datasets(root: Path) -> tuple[Dataset, Dataset]:
     """Load datasets stored at data/*.tar.gz"""
@@ -50,11 +52,15 @@ def main(root: Path) -> None:
 
     thermo_data, energy_data = load_datasets(root)
 
+    # tensor_ff is a subset of all parameters, capturing the parameters
+    # used in the datasets
     topologies, tensor_ff = topologies_for(
         smiles_set={
             *thermo.extract_smiles(thermo_data),
             *energy.extract_smiles(energy_data),
-        },
+        }
+        if MERGE_DATA
+        else {*thermo.extract_smiles(thermo_data)},
         smirnoff_force_field=ForceField(INITIAL_FORCE_FIELD),
     )
 
@@ -77,7 +83,21 @@ def main(root: Path) -> None:
     for epoch in range(N_EPOCHS):
         # maybe do this outside of loop for iteration 0, then
         # at end of loop for [1, ..., N_EPOCHS]?
-        current_ff = trainable.to_force_field(theta)
+        current_ff = trainable.to_force_field(theta)  # 287
+
+        # import json
+        # from tyff._serialization import load_tensor_force_field
+
+        # sum(t.numel() for t in _pack_force_field(ref)[0] if t is not None)
+        # is probably 208
+
+        # current_ff = load_tensor_force_field(
+        #     json.loads(
+        #         open(
+        #             'examples/mvp/EPOCH_0/simulations/reference_force_fields/reference.json'
+        #         ).read()
+        #     )
+        # )
 
         # no return value?
         simulate(
@@ -95,27 +115,31 @@ def main(root: Path) -> None:
             epoch_dir=root / f"EPOCH_{epoch}",
         )
 
-        energy_ref, energy_pred, forces_ref, forces_pred = energy.predict(
-            energy_data,
-            current_ff,
-            topologies,
-            normalize=False,
-        )
+        if MERGE_DATA:
+            energy_ref, energy_pred, forces_ref, forces_pred = energy.predict(
+                energy_data,
+                current_ff,
+                topologies,
+                normalize=False,
+            )
 
-        loss = (
-            (energy_pred - energy_ref).square().mean()
-            + 0.1 * (forces_pred - forces_ref).square().mean()
-            + (y_pred - y_ref).square().mean()
-        )
+            # the weights in front of each category of loss (energy, forces, and thermo)
+            # should be exposed to the user in some sort of training config
+            # probably a good phase II task
+            loss = (
+                (energy_pred - energy_ref).square().mean()
+                + 0.1 * (forces_pred - forces_ref).square().mean()
+                + (y_pred - y_ref).square().mean()
+            )
+        else:
+            loss = (y_pred - y_ref).square().mean()
 
         logger.info(f"EPOCH {epoch}: loss={loss.item():.6f}")
+        print(f"EPOCH {epoch}: loss={loss.item():.6f}")
 
         optimizer.zero_grad()
 
         loss.backward()
-        # ipdb> loss.backward()
-        # *** RuntimeError: Function RemoteEnsembleAverageBackward returned an invalid gradient at
-        # index 2 - got [208] but expected shape compatible with [287]
 
         optimizer.step()
 
