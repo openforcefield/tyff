@@ -19,7 +19,7 @@ N_REPLICATES = 2
 N_MOLECULES = 200
 INITIAL_FORCE_FIELD = "openff-2.3.0.offxml"
 
-MERGE_DATA = False
+MERGE_DATA = True
 
 
 def load_datasets(root: Path) -> tuple[Dataset, Dataset]:
@@ -85,19 +85,20 @@ def main(root: Path) -> None:
         # at end of loop for [1, ..., N_EPOCHS]?
         current_ff = trainable.to_force_field(theta)  # 287
 
-        # import json
-        # from tyff._serialization import load_tensor_force_field
+        import json
+
+        from tyff._serialization import load_tensor_force_field
 
         # sum(t.numel() for t in _pack_force_field(ref)[0] if t is not None)
         # is probably 208
 
-        # current_ff = load_tensor_force_field(
-        #     json.loads(
-        #         open(
-        #             'examples/mvp/EPOCH_0/simulations/reference_force_fields/reference.json'
-        #         ).read()
-        #     )
-        # )
+        thermo_ff = load_tensor_force_field(
+            json.loads(
+                open(
+                    f"examples/mvp/EPOCH_{epoch}/simulations/reference_force_fields/reference.json",
+                ).read()
+            )
+        )
 
         # no return value?
         simulate(
@@ -111,7 +112,7 @@ def main(root: Path) -> None:
 
         y_ref, _y_ref_std, y_pred, _y_pred_std = predict(
             dataset=thermo_data,
-            force_field=current_ff,
+            force_field=thermo_ff,
             epoch_dir=root / f"EPOCH_{epoch}",
         )
 
