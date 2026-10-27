@@ -21,6 +21,14 @@ INITIAL_FORCE_FIELD = "openff-2.3.0.offxml"
 
 MERGE_DATA = True
 
+# these weights should be exposed to the user in some sort of training config
+# probably a good phase II task
+COEFFICIENTS = {
+    "energy": 0.1,
+    "force": 0.01,
+    "thermo": 100_000.0,
+}
+
 
 def load_datasets(root: Path) -> tuple[Dataset, Dataset]:
     """Load datasets stored at data/*.tar.gz"""
@@ -124,13 +132,10 @@ def main(root: Path) -> None:
                 normalize=False,
             )
 
-            # the weights in front of each category of loss (energy, forces, and thermo)
-            # should be exposed to the user in some sort of training config
-            # probably a good phase II task
             loss = (
-                (energy_pred - energy_ref).square().mean()
-                + 0.1 * (forces_pred - forces_ref).square().mean()
-                + (y_pred - y_ref).square().mean()
+                COEFFICIENTS["energy"] * (energy_pred - energy_ref).square().mean()
+                + COEFFICIENTS["force"] * (forces_pred - forces_ref).square().mean()
+                + COEFFICIENTS["thermo"] * (y_pred - y_ref).square().mean()
             )
         else:
             loss = (y_pred - y_ref).square().mean()
