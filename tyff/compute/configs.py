@@ -30,7 +30,7 @@ def local_config(max_workers: int = 10):
                 cores_per_worker=1,
             )
         ],
-        strategy='htex_auto_scale',
+        strategy="htex_auto_scale",
         monitoring=MonitoringHub(
             resource_monitoring_interval=5,  # seconds; 0 disables per-task resource sampling
         ),
