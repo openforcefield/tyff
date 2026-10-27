@@ -1,20 +1,25 @@
 import tarfile
+from json import dump
 from pathlib import Path
 
 from datasets import Dataset
 from openff.toolkit import ForceField
-from rich import print
+from torch import no_grad
+from torch.optim import Adam
 
+from tyff._serialization import dump_tensor_force_field
 from tyff.compute._logging import _set_up_logger
-from tyff.converters import topologies_for
+from tyff.converters import convert_tensor_force_field, topologies_for
 from tyff.targets import energy, thermo
 from tyff.targets.new_thermo import predict, simulate
 from tyff.train import ParameterConfig, Trainable
 
-N_EPOCHS = 1
-N_REPLICATES = 3
+N_EPOCHS = 10
+N_REPLICATES = 2
 N_MOLECULES = 200
 INITIAL_FORCE_FIELD = "openff-2.3.0.offxml"
+
+MERGE_DATA = False
 
 
 def load_datasets(root: Path) -> tuple[Dataset, Dataset]:
@@ -43,13 +48,19 @@ def main(root: Path) -> None:
 
     logger = _set_up_logger(f"{root}/mvp.log")
 
+    (root / "force_fields").mkdir(exist_ok=True)
+
     thermo_data, energy_data = load_datasets(root)
 
-    _topologies, tensor_ff = topologies_for(
+    # tensor_ff is a subset of all parameters, capturing the parameters
+    # used in the datasets
+    topologies, tensor_ff = topologies_for(
         smiles_set={
             *thermo.extract_smiles(thermo_data),
             *energy.extract_smiles(energy_data),
-        },
+        }
+        if MERGE_DATA
+        else {*thermo.extract_smiles(thermo_data)},
         smirnoff_force_field=ForceField(INITIAL_FORCE_FIELD),
     )
 
@@ -65,9 +76,28 @@ def main(root: Path) -> None:
         attributes={},
     )
     theta = trainable.to_values().requires_grad_(True)
+    optimizer = Adam([theta], lr=0.01)
 
+    # TODO: inner/outer loop, or any way of stepping through QM optimization
+    #       without running MD jobs each time
     for epoch in range(N_EPOCHS):
-        current_ff = trainable.to_force_field(theta)
+        # maybe do this outside of loop for iteration 0, then
+        # at end of loop for [1, ..., N_EPOCHS]?
+        current_ff = trainable.to_force_field(theta)  # 287
+
+        # import json
+        # from tyff._serialization import load_tensor_force_field
+
+        # sum(t.numel() for t in _pack_force_field(ref)[0] if t is not None)
+        # is probably 208
+
+        # current_ff = load_tensor_force_field(
+        #     json.loads(
+        #         open(
+        #             'examples/mvp/EPOCH_0/simulations/reference_force_fields/reference.json'
+        #         ).read()
+        #     )
+        # )
 
         # no return value?
         simulate(
@@ -79,21 +109,58 @@ def main(root: Path) -> None:
             n_molecules=N_MOLECULES,
         )
 
-        y_ref, y_ref_std, y_pred, y_pred_std = predict(
+        y_ref, _y_ref_std, y_pred, _y_pred_std = predict(
             dataset=thermo_data,
             force_field=current_ff,
             epoch_dir=root / f"EPOCH_{epoch}",
         )
 
-        print(f"{y_ref=}\n{y_ref_std=}\n{y_pred=}\n{y_pred_std=}\n")
-        # y_ref=tensor([0.8736, 0.8060, 1.1335, 0.8579, 0.8215, 0.8375, 0.8543, 1.0950, 1.1203,
-        #         1.1290])
-        # y_ref_std=tensor([4.0000e-05, 5.7000e-05, 5.0000e-04, 3.3500e-04, 1.1150e-04, 1.0100e-04,
-        #         9.1000e-05, 1.5000e-04, 3.5000e-04, 1.0000e-03])
-        # y_pred=tensor([0.8859, 0.7895, 1.1050, 0.8637, 0.8140, 0.8355, 0.8586, 1.0800, 1.0986,
-        #         1.1028], dtype=torch.float64, grad_fn=<StackBackward0>)
-        # y_pred_std=tensor([0.0037, 0.0043, 0.0068, 0.0021, 0.0024, 0.0025, 0.0065, 0.0065, 0.0092,
-        #         0.0034], dtype=torch.float64, grad_fn=<StackBackward0>)
+        if MERGE_DATA:
+            energy_ref, energy_pred, forces_ref, forces_pred = energy.predict(
+                energy_data,
+                current_ff,
+                topologies,
+                normalize=False,
+            )
+
+            # the weights in front of each category of loss (energy, forces, and thermo)
+            # should be exposed to the user in some sort of training config
+            # probably a good phase II task
+            loss = (
+                (energy_pred - energy_ref).square().mean()
+                + 0.1 * (forces_pred - forces_ref).square().mean()
+                + (y_pred - y_ref).square().mean()
+            )
+        else:
+            loss = (y_pred - y_ref).square().mean()
+
+        logger.info(f"EPOCH {epoch}: loss={loss.item():.6f}")
+        print(f"EPOCH {epoch}: loss={loss.item():.6f}")
+
+        optimizer.zero_grad()
+
+        loss.backward()
+
+        optimizer.step()
+
+        with no_grad():
+            theta.copy_(trainable.clamp(theta))
+
+        updated_tensor_force_field = trainable.to_force_field(theta)
+
+        # write out FF as tensor
+        with open(root / "force_fields" / f"after_EPOCH_{epoch}.ff.json", "w") as f:
+            dump(
+                dump_tensor_force_field(updated_tensor_force_field),
+                f,
+                indent=4,
+            )
+
+        # write out FF as SMIRNOFF force field
+        convert_tensor_force_field(
+            original_force_field=ForceField(INITIAL_FORCE_FIELD),
+            tensor_force_field=updated_tensor_force_field,
+        ).to_file(str(root / "force_fields" / f"after_EPOCH_{epoch}.offxml"))
 
 
 if __name__ == "__main__":

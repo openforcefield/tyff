@@ -571,4 +571,5 @@ class RemoteEnsembleAverage(torch.autograd.Function):
         grad_output: torch.Tensor,
     ) -> tuple[None, None, torch.Tensor]:
         (jacobian,) = ctx.saved_tensors
+
         return None, None, grad_output @ jacobian
