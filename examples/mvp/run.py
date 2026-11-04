@@ -19,7 +19,15 @@ N_REPLICATES = 2
 N_MOLECULES = 200
 INITIAL_FORCE_FIELD = "openff-2.3.0.offxml"
 
-MERGE_DATA = False
+MERGE_DATA = True
+
+# these weights should be exposed to the user in some sort of training config
+# probably a good phase II task
+COEFFICIENTS = {
+    "energy": 0.1,
+    "force": 0.01,
+    "thermo": 100_000.0,
+}
 
 
 def load_datasets(root: Path) -> tuple[Dataset, Dataset]:
@@ -75,7 +83,10 @@ def main(root: Path) -> None:
         },
         attributes={},
     )
+    # these is the torch representation - the thing that is being optimized
     theta = trainable.to_values().requires_grad_(True)
+
+    # here's where the L-M optimizer could be put in - some scientific quesitons about which is better
     optimizer = Adam([theta], lr=0.01)
 
     # TODO: inner/outer loop, or any way of stepping through QM optimization
@@ -83,28 +94,18 @@ def main(root: Path) -> None:
     for epoch in range(N_EPOCHS):
         # maybe do this outside of loop for iteration 0, then
         # at end of loop for [1, ..., N_EPOCHS]?
+
+        # current_ff is linked under the hood to theta - need to keep them linked to keep gradients together
         current_ff = trainable.to_force_field(theta)  # 287
 
-        # import json
-        # from tyff._serialization import load_tensor_force_field
-
         # sum(t.numel() for t in _pack_force_field(ref)[0] if t is not None)
-        # is probably 208
-
-        # current_ff = load_tensor_force_field(
-        #     json.loads(
-        #         open(
-        #             'examples/mvp/EPOCH_0/simulations/reference_force_fields/reference.json'
-        #         ).read()
-        #     )
-        # )
 
         # no return value?
         simulate(
             force_field=current_ff,
             epoch_dir=root / f"EPOCH_{epoch}",
             thermo_data=thermo_data,
-            smirnoff_force_field=ForceField(INITIAL_FORCE_FIELD),
+            smirnoff_force_field=INITIAL_FORCE_FIELD,
             n_replicates=N_REPLICATES,
             n_molecules=N_MOLECULES,
         )
@@ -123,13 +124,10 @@ def main(root: Path) -> None:
                 normalize=False,
             )
 
-            # the weights in front of each category of loss (energy, forces, and thermo)
-            # should be exposed to the user in some sort of training config
-            # probably a good phase II task
             loss = (
-                (energy_pred - energy_ref).square().mean()
-                + 0.1 * (forces_pred - forces_ref).square().mean()
-                + (y_pred - y_ref).square().mean()
+                COEFFICIENTS["energy"] * (energy_pred - energy_ref).square().mean()
+                + COEFFICIENTS["force"] * (forces_pred - forces_ref).square().mean()
+                + COEFFICIENTS["thermo"] * (y_pred - y_ref).square().mean()
             )
         else:
             loss = (y_pred - y_ref).square().mean()
@@ -156,7 +154,7 @@ def main(root: Path) -> None:
                 indent=4,
             )
 
-        # write out FF as SMIRNOFF force field
+        # update SMIRNOFF force field with new values from tensor FF
         convert_tensor_force_field(
             original_force_field=ForceField(INITIAL_FORCE_FIELD),
             tensor_force_field=updated_tensor_force_field,

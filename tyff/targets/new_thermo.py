@@ -19,7 +19,7 @@ def simulate(
     force_field: tyff.TensorForceField,
     epoch_dir: Path,
     thermo_data: Dataset,
-    smirnoff_force_field: ForceField,
+    smirnoff_force_field: str,
     n_molecules: int,
     n_replicates: int,
 ) -> None:
@@ -36,8 +36,8 @@ def simulate(
         The directory for this epoch where simulation results will be stored.
     thermo_data : Dataset
         The dataset containing thermodynamic data for the simulation.
-    smirnoff_force_field : ForceField
-        The original SMIRNOFF force field corresponding to the tensor force field.
+    smirnoff_force_field : str
+        The path to the original SMIRNOFF force field corresponding to the tensor force field.
     n_molecules : int
         The number of molecules to simulate.
     n_replicates : int
@@ -50,14 +50,14 @@ def simulate(
 
     # write out this epoch's (tensor) force field as a SMIRNOFF force field
     current_smirnoff_force_field = convert_tensor_force_field(
-        original_force_field=smirnoff_force_field,
+        original_force_field=ForceField(smirnoff_force_field),
         tensor_force_field=force_field,
     )
 
     epoch_dir.mkdir(exist_ok=True)
 
     smirnoff_force_field_file = str(epoch_dir / "current_force_field.offxml")
-    current_smirnoff_force_field.to_file(smirnoff_force_field_file)
+    current_smirnoff_force_field.to_file(filename=smirnoff_force_field_file)
 
     with SimulationWorkflow(
         base_dir=str(epoch_dir / "simulations"),
@@ -65,7 +65,8 @@ def simulate(
     ) as workflow:
         workflow.submit_dataset(
             dataset=thermo_data,
-            force_field=smirnoff_force_field_file,
+            tensor_force_field=force_field,
+            force_field=smirnoff_force_field_file,  # possibly smoother to pass through openff.toolkit.ForceField
             n_molecules=n_molecules,
             n_replicates=n_replicates,
         )
