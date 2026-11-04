@@ -83,7 +83,10 @@ def main(root: Path) -> None:
         },
         attributes={},
     )
+    # these is the torch representation - the thing that is being optimized
     theta = trainable.to_values().requires_grad_(True)
+
+    # here's where the L-M optimizer could be put in - some scientific quesitons about which is better
     optimizer = Adam([theta], lr=0.01)
 
     # TODO: inner/outer loop, or any way of stepping through QM optimization
@@ -91,36 +94,25 @@ def main(root: Path) -> None:
     for epoch in range(N_EPOCHS):
         # maybe do this outside of loop for iteration 0, then
         # at end of loop for [1, ..., N_EPOCHS]?
+
+        # current_ff is linked under the hood to theta - need to keep them linked to keep gradients together
         current_ff = trainable.to_force_field(theta)  # 287
 
-        import json
-
-        from tyff._serialization import load_tensor_force_field
-
         # sum(t.numel() for t in _pack_force_field(ref)[0] if t is not None)
-        # is probably 208
-
-        thermo_ff = load_tensor_force_field(
-            json.loads(
-                open(
-                    f"examples/mvp/EPOCH_{epoch}/simulations/reference_force_fields/reference.json",
-                ).read()
-            )
-        )
 
         # no return value?
         simulate(
             force_field=current_ff,
             epoch_dir=root / f"EPOCH_{epoch}",
             thermo_data=thermo_data,
-            smirnoff_force_field=ForceField(INITIAL_FORCE_FIELD),
+            smirnoff_force_field=INITIAL_FORCE_FIELD,
             n_replicates=N_REPLICATES,
             n_molecules=N_MOLECULES,
         )
 
         y_ref, _y_ref_std, y_pred, _y_pred_std = predict(
             dataset=thermo_data,
-            force_field=thermo_ff,
+            force_field=current_ff,
             epoch_dir=root / f"EPOCH_{epoch}",
         )
 
@@ -162,7 +154,7 @@ def main(root: Path) -> None:
                 indent=4,
             )
 
-        # write out FF as SMIRNOFF force field
+        # update SMIRNOFF force field with new values from tensor FF
         convert_tensor_force_field(
             original_force_field=ForceField(INITIAL_FORCE_FIELD),
             tensor_force_field=updated_tensor_force_field,

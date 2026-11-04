@@ -162,11 +162,32 @@ class SimulationWorkflow:
     def submit_dataset(
         self,
         dataset: datasets.Dataset,  # should be something that unpacks to DataEntry on iteration
+        tensor_force_field: tyff.TensorForceField,
         force_field: str,
         n_molecules: int,
         n_replicates: int = 3,
     ):
-        import openff.toolkit
+        """
+        Submit a dataset of targets for computation.
+
+        Parameters
+        ----------
+        dataset : datasets.Dataset
+            The dataset containing targets to be submitted.
+        tensor_force_field : tyff.TensorForceField
+            The tensor representation of the force field to be used.
+        force_field : str
+            The path to the reference force field.
+        n_molecules : int
+            The number of molecules to consider for each target.
+        n_replicates : int, optional
+            The number of replicates for each target, by default 3.
+
+        Returns
+        -------
+        list
+            A list of results from submitting each target.
+        """
 
         from tyff._serialization import dump_tensor_force_field
 
@@ -192,45 +213,16 @@ class SimulationWorkflow:
             for smiles_ in target["smiles"]:
                 unique_smiles.add(smiles_)
 
-        # TODO: Probably drop this
-        (pathlib.Path(self.base_dir) / "interchanges").mkdir(exist_ok=True)
-
-        interchanges = list()
-
-        force_field_ = openff.toolkit.ForceField(force_field)
-        for index, unique_smiles_ in enumerate(sorted(unique_smiles)):
-            interchange = force_field_.create_interchange(
-                openff.toolkit.Molecule.from_mapped_smiles(unique_smiles_).to_topology()
-            )
-            interchanges.append(interchange)
-
-            with open(pathlib.Path(self.base_dir) / "interchanges" / f"interchange_{index}.json", "w") as f:
-                f.write(interchange.model_dump_json(indent=4))
-
-        self._reference_force_fields = pathlib.Path(self.base_dir) / "reference_force_fields"
-        self._reference_force_fields.mkdir(exist_ok=True)
-
-        assert self._reference_force_fields.exists()
-        assert self._reference_force_fields.is_dir()
-
-        logger.info(f"Made a path to store reference force fields at {self._reference_force_fields}")
-        # this is a "global"/reference force field composed from all unique molecules,
-        # don't think we're going to use the topologies here
-        reference_force_field, _tensor_topologies = tyff.converters.convert_interchange(interchanges)
-
-        # make sure this is not empty
-        assert len(reference_force_field.potentials) > 0
-
         logger.info(
             "Writing reference force field from path (which is probably outside of "
             f"this workflow's root): {force_field=}"
-            f"to path {self._reference_force_fields / 'reference.json'}"
+            f"to path {pathlib.Path(self.base_dir) / 'reference_force_field.json'}"
         )
 
         # dumps a JSON representation of the tensor representation of the SMIRNOFF force field
-        with open(self._reference_force_fields / "reference.json", "w") as f:
+        with open(pathlib.Path(self.base_dir) / "reference_force_field.json", "w") as f:
             json.dump(
-                dump_tensor_force_field(reference_force_field),
+                dump_tensor_force_field(tensor_force_field),
                 f,
                 indent=4,
             )
@@ -413,9 +405,7 @@ class SimulationWorkflow:
         jacobian_future = create_jacobian(
             production_future=production_future,
             job_dir=job_dir,
-            # pathing here is weird, but there should only be one global reference
-            # force field for this workflow
-            reference_force_field_path=self._reference_force_fields / "reference.json",
+            reference_force_field_path=pathlib.Path(self.base_dir) / "reference_force_field.json",
         )
 
         return {"job_id": job_id, "future": jacobian_future}
