@@ -1,0 +1,92 @@
+name: GPU-enabled CI
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - "main"
+
+concurrency:
+  # Specific group naming so CI is only cancelled
+  # within same PR or on merge to main
+  group: ${{ github.ref }}-${{ github.head_ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash -l {0}
+
+env:
+  OE_LICENSE: ${{ github.workspace }}/oe_license.txt
+
+jobs:
+  start-aws-runner:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      mapping: ${{ steps.aws-start.outputs.mapping }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::649715411074:role/gh-actions-runner-role
+          aws-region: us-east-1
+      - name: Create cloud runner
+        id: aws-start
+        uses: omsf/start-aws-gha-runner@v1.3.0
+        with:
+          aws_image_id: ami-0d5079d9be06933e5
+          aws_instance_type: g4dn.xlarge
+          # IAM default might be 5 GB?
+          aws_root_device_size: 125
+          aws_region_name: us-east-1
+          aws_home_dir: /home/ubuntu
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+  self-hosted-test:
+    name: GPU-based tests (env ${{ matrix.environment }})
+    runs-on: self-hosted
+    strategy:
+        fail-fast: true
+        matrix:
+          environment:
+            - hpc3  # re-using an otherwise generic CUDA environment
+    needs:
+      - start-aws-runner
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up virtual environment
+        uses: prefix-dev/setup-pixi@v0.11.3
+        with:
+          environments: ${{ matrix.environment }}
+          frozen: true
+
+      - name: Run GPU-based tests
+        run: pixi run -e ${{ matrix.environment }} run_gpu_tests
+
+  stop-aws-runner:
+    runs-on: ubuntu-latest
+    permissions:
+        id-token: write
+        contents: read
+    needs:
+      - start-aws-runner
+      - self-hosted-test
+    if: ${{ always() }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::649715411074:role/gh-actions-runner-role
+          aws-region: us-east-1
+      - name: Stop instances
+        uses: omsf/stop-aws-gha-runner@v1.0.0
+        with:
+          instance_mapping: ${{ needs.start-aws-runner.outputs.mapping }}
+          aws_region_name: us-east-1
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}

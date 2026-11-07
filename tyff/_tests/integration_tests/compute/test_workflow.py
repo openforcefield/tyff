@@ -48,11 +48,15 @@ def test_nonstandard_pressure(tmp_path):
 
         for job_dir in job_dirs:
             with open(job_dir / "compute_config.json") as f:
-                target_pressure = json.load(f)["pressure"]
+                compute_config = json.load(f)
+                target_pressure = compute_config["pressure"]
+
+                assert compute_config["temperature"] == 298.15
 
             with open(job_dir / "ensemble_averages.json") as f:
                 density = json.load(f)["density"]
 
             results[target_pressure] = density
 
+        # these should be ~1.04 and ~1.00, but certainly denser at higher pressure
         assert results[101325.0] > results[101.325]
