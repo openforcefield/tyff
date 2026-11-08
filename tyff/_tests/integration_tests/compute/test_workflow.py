@@ -42,7 +42,13 @@ def test_nonstandard_pressure(tmp_path):
         workflow.wait()
 
         # hack - there needs to be a better way of grabbing results
-        job_dirs = [path for path in (tmp_path / "simulations").glob("*/") if not path.match("thermo_targets")]
+        job_dirs = [
+            path
+            for path in (tmp_path).glob("*/")
+            if not path.match("thermo_targets")
+            and not path.match("reference_force_fields")
+            and not path.match("interchanges")
+        ]
 
         results = dict()
 
@@ -58,5 +64,4 @@ def test_nonstandard_pressure(tmp_path):
 
             results[target_pressure] = density
 
-        # these should be ~1.04 and ~1.00, but certainly denser at higher pressure
         assert results[101325.0] > results[101.325]
