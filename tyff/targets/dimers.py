@@ -10,10 +10,10 @@ import torch
 import tqdm
 
 import tyff
+import tyff.molecule
 import tyff.utils
 import tyff.utils.dataset
 import tyff.utils.loss
-import tyff.utils.molecule
 import tyff.utils.reporting
 
 if typing.TYPE_CHECKING:
@@ -154,8 +154,8 @@ def create_from_des(
             )
             mol_a, mol_b = Chem.GetMolFrags(dimer_example, asMols=True)
 
-            smiles_a = tyff.utils.molecule.mol_to_smiles(mol_a, False)
-            smiles_b = tyff.utils.molecule.mol_to_smiles(mol_b, False)
+            smiles_a = tyff.molecule.mol_to_smiles(mol_a, False)
+            smiles_b = tyff.molecule.mol_to_smiles(mol_b, False)
 
             source = f"{data_dir.name} system={system_id} orig={group_orig} group={group_id}"
 

@@ -6,6 +6,7 @@ import uncertainties.unumpy
 
 import tyff.mm
 import tyff.utils.dataset
+from tyff.molecule import map_smiles
 from tyff.targets.thermo import (
     DataEntry,
     SimulationConfig,
@@ -24,7 +25,6 @@ from tyff.targets.thermo import (
     predict,
     select_config,
 )
-from tyff.utils.molecule import map_smiles
 
 
 @pytest.fixture

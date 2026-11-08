@@ -78,7 +78,7 @@ def _get_ensemble_average_and_jacobian(
         compute_config = BulkLiquid(**json.load(f))  # type: ignore[typeddict-item]
 
     temperature = compute_config["temperature"]  # kelvin, float
-    pressure = compute_config.get("pressure")  # atmosphere, float | None
+    pressure = compute_config.get("pressure")  # kPa, float | None
 
     interchanges = []
 
@@ -141,7 +141,7 @@ def _get_ensemble_average_and_jacobian(
         worker_force_field,
         frames_path,
         temperature * openmm.unit.kelvin,
-        None if pressure is None else pressure * openmm.unit.atmosphere,
+        None if pressure is None else pressure * openmm.unit.kilopascal,
     )
 
     # originally this was sorted(means),

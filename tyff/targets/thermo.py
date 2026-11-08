@@ -17,11 +17,11 @@ import pydantic
 import torch
 
 import tyff.mm
+import tyff.molecule
 import tyff.optim
 import tyff.utils
 import tyff.utils.dataset
 import tyff.utils.loss
-import tyff.utils.molecule
 
 if typing.TYPE_CHECKING:
     import tyff.train
@@ -154,7 +154,7 @@ def create_dataset(*entries: DataEntry) -> datasets.Dataset:
     copied_entries = [entry for entry in entries]
 
     for copied_entry in copied_entries:
-        copied_entry["smiles"] = [tyff.utils.molecule.map_smiles(value) for value in copied_entry["smiles"]]
+        copied_entry["smiles"] = [tyff.molecule.map_smiles(value) for value in copied_entry["smiles"]]
 
     # could roundtrip through DataEntry here as a form of validation
 
@@ -728,7 +728,7 @@ def predict(
             verbose_rows.append(
                 {
                     "tag": f"{entry['tag']} [{entry['units']}]",
-                    "smiles": [tyff.utils.molecule.unmap_smiles(smiles) for smiles in entry["smiles"]],
+                    "smiles": [tyff.molecule.unmap_smiles(smiles) for smiles in entry["smiles"]],
                     "pred": f"{float(value):.3f} ± {float(std):.3f}",
                     "ref": f"{float(entry['value']):.3f}{std_ref}",
                 }
