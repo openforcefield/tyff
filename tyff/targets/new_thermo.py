@@ -223,39 +223,37 @@ def compute_properties(
                     "Gas and liquid temperatures must be the same for dHvap calculation"
                 )
 
-                # these are probably kcal/mol, not kJ
-                enthalpy_gas = observables[gas_job_id]["potential_energy"]
-                enthalpy_liquid = observables[liquid_job_id]["potential_energy"]
+                kcal_to_kJ = 4.184
+
+                # these are stored in kcal/mol, so need to convert
+                gas_energy = observables[gas_job_id]["potential_energy"] * kcal_to_kJ
+                liquid_energy = observables[liquid_job_id]["potential_energy"] * kcal_to_kJ
 
                 n_molecules = liquid_config["n_molecules"]
 
+                # 0.00831446261815324
                 R = (1 * unit.avogadro_number * unit.boltzmann_constant).m_as("kJ/K")
 
                 print(
-                    f"Enthalpy of vaporization calculation: {enthalpy_gas=}, {enthalpy_liquid=}, "
+                    f"Enthalpy of vaporization calculation: {gas_energy=}, {liquid_energy=}, "
                     f"{n_molecules=}, {R=}, {gas_config['temperature']=}"
                 )
 
                 # Enthalpy of vaporization calculation:
-                #   enthalpy_gas=tensor(314.2987, dtype=torch.float64),
-                #   enthalpy_liquid=tensor(138130.4375, dtype=torch.float64),
-                #   n_molecules=360,
-                #   R=0.00831446261815324,
-                #   gas_config['temperature']=300.0
+                #     gas_energy=tensor(1308.0884, dtype=torch.float64),
+                #     liquid_energy=tensor(386691.8175, dtype=torch.float64),
+                #     n_molecules=240,
+                #     R=0.00831446261815324,
+                #     gas_config['temperature']=300.0
+                #
                 # Enthalpy of vaporization calculation:
-                #   enthalpy_gas=tensor(311.2487, dtype=torch.float64),
-                #   enthalpy_liquid=tensor(138186.0469, dtype=torch.float64),
-                #   n_molecules=360,
-                #   R=0.00831446261815324,
-                #   gas_config['temperature']=300.0
-                # Enthalpy of vaporization calculation:
-                #   enthalpy_gas=tensor(313.9513, dtype=torch.float64),
-                #   enthalpy_liquid=tensor(138701.0781, dtype=torch.float64),
-                #   n_molecules=360,
-                #   R=0.00831446261815324,
-                #   gas_config['temperature']=300.0
+                #     gas_energy=tensor(1300.6276, dtype=torch.float64),
+                #     liquid_energy=tensor(385886.6263, dtype=torch.float64),
+                #     n_molecules=240,
+                #     R=0.00831446261815324,
+                #     gas_config['temperature']=300.0
 
-                dhvap = enthalpy_gas - enthalpy_liquid / n_molecules + R * gas_config["temperature"]  # kJ/mol
+                dhvap = gas_energy - liquid_energy / n_molecules + R * gas_config["temperature"]  # kJ/mol
 
                 values.append(dhvap)
 
