@@ -154,7 +154,10 @@ def _run_equilibration(
 
     logger.info(f"Using OpenMM platform: {detected_platform}")
 
-    simulation.step(10_000)
+    try:
+        simulation.step(10_000)
+    except openmm.OpenMMException as error:
+        raise RuntimeError(f"OpenMM crashed during equilibration in {job_dir=}") from error
 
     with open(files["topology"].filepath, "w") as f:
         openmm.app.PDBFile.writeFile(

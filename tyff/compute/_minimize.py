@@ -76,7 +76,10 @@ def _minimize_energy(
 
     original_state = simulation.context.getState(energy=True)
 
-    simulation.minimizeEnergy()
+    try:
+        simulation.minimizeEnergy()
+    except openmm.OpenMMException as error:
+        raise RuntimeError(f"OpenMM crashed during minimization in {job_dir=}") from error
 
     final_state = simulation.context.getState(energy=True, positions=True)
 

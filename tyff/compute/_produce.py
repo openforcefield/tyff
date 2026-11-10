@@ -152,7 +152,10 @@ def _run_production(
 
     for index in range(10):
         logger.info(f"Running from step {index * 10_000} to step {(index + 1) * 10_000}")
-        simulation.step(10_000)
+        try:
+            simulation.step(10_000)
+        except openmm.OpenMMException as error:
+            raise RuntimeError(f"OpenMM crashed during production run in {job_dir=}") from error
 
     with open(files["topology"].filepath, "w") as f:
         openmm.app.PDBFile.writeFile(

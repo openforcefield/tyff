@@ -15,6 +15,8 @@ from tyff.converters.openff._tensors import convert_tensor_force_field
 from tyff.mm._ops import RemoteEnsembleAverage
 from tyff.targets.thermo import DataEntry
 
+KCAL_TO_KJ = 4.184
+
 
 def simulate(
     tensor_force_field: tyff.TensorForceField,
@@ -175,8 +177,84 @@ def compute_properties(
             raise NotImplementedError()
             # likely identical to density case
         elif entry["tag"] == "enthalpy_of_mixing":
-            raise NotImplementedError()
-            # figure out the three job IDs necessary from observables, calculate, etc
+            for (target_id, *_), job_ids in target_compute_mapping.items():
+                if target_id == entry["id"]:
+                    break
+
+            values = list()
+
+            for job_ids_in_this_replicate in job_ids:
+                assert len(job_ids_in_this_replicate) >= 3, (
+                    "Enthalpy of vaporization requires three or more jobs (pure and each component)"
+                )
+                with (
+                    open(
+                        epoch_dir / "simulations" / job_ids_in_this_replicate[0] / "compute_config.json",
+                    ) as f0,
+                    open(
+                        epoch_dir / "simulations" / job_ids_in_this_replicate[1] / "compute_config.json",
+                    ) as f1,
+                    open(
+                        epoch_dir / "simulations" / job_ids_in_this_replicate[2] / "compute_config.json",
+                    ) as f2,
+                ):
+                    compute_configs = [
+                        json.load(f0),
+                        json.load(f1),
+                        json.load(f2),
+                    ]
+
+                    mixture_config = next(d for d in compute_configs if len(d["smiles"]) == 2)
+
+                    mixture_job_id = job_ids_in_this_replicate[compute_configs.index(mixture_config)]
+
+                    # try to keep this flexible to ternary+ mixtures
+                    components = mixture_config["smiles"]
+                    x = mixture_config["x"]
+
+                    pure_configs = [
+                        next(d for d in compute_configs if d["smiles"] == [component_i]) for component_i in components
+                    ]
+
+                    component_job_ids = list()
+                    for component_i in components:
+                        component_job_id = next(
+                            job_ids_in_this_replicate[compute_configs.index(d)]
+                            for d in compute_configs
+                            if d["smiles"] == [component_i]
+                        )
+                        component_job_ids.append(component_job_id)
+
+                    # the provided job IDs should be represented by these variables, add several checks to make sure
+                    # parsing+bookkeepping is all lined up
+                    assert sorted([*component_job_ids, mixture_job_id]) == sorted(job_ids_in_this_replicate)
+
+                    assert len(component_job_ids) == len(pure_configs) == len(mixture_config["smiles"])
+
+                    for component_config in pure_configs:
+                        assert len(component_config["smiles"]) == len(component_config["x"]) == 1
+                        assert component_config["smiles"][0] in mixture_config["smiles"]
+
+                    mixture_energy = observables[mixture_job_id]["potential_energy"]
+
+                    component_energies = [
+                        observables[component_job_id]["potential_energy"] for component_job_id in component_job_ids
+                    ]
+                    component_n_molecules = [config["n_molecules"] for config in pure_configs]
+
+                    # this is kcal/mol because of what observables is computed as in tyff/mm/_ops.py
+                    dhmix = mixture_energy / mixture_config["n_molecules"] - sum(
+                        x_i * component_energy_i / n_i
+                        for x_i, component_energy_i, n_i in zip(x, component_energies, component_n_molecules)
+                    )
+
+                    values.append(dhmix * KCAL_TO_KJ)  # convert to kJ/mol
+
+            types_of_observables = [*observables[job_ids[0][0]].keys()]
+
+            mean: dict[str, torch.Tensor] = {key: torch.stack(values).mean() for key in types_of_observables}
+            std: dict[str, torch.Tensor] = {key: torch.stack(values).std() for key in types_of_observables}
+
         elif entry["tag"] == "excess_molar_volume":
             raise NotImplementedError()
         elif entry["tag"] == "enthalpy_of_vaporization":
@@ -223,11 +301,9 @@ def compute_properties(
                     "Gas and liquid temperatures must be the same for dHvap calculation"
                 )
 
-                kcal_to_kJ = 4.184
-
                 # these are stored in kcal/mol, so need to convert
-                gas_energy = observables[gas_job_id]["potential_energy"] * kcal_to_kJ
-                liquid_energy = observables[liquid_job_id]["potential_energy"] * kcal_to_kJ
+                gas_energy = observables[gas_job_id]["potential_energy"] * KCAL_TO_KJ
+                liquid_energy = observables[liquid_job_id]["potential_energy"] * KCAL_TO_KJ
 
                 n_molecules = liquid_config["n_molecules"]
 
