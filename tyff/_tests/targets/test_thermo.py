@@ -2,7 +2,7 @@ import numpy
 import openmm.unit
 import pytest
 import torch
-import uncertainties.unumpy
+import uncertainties
 
 import tyff.mm
 import tyff.utils.dataset
@@ -30,7 +30,7 @@ from tyff.targets.thermo import (
 @pytest.fixture
 def mock_density_pure() -> DataEntry:
     return {
-        "id": None,
+        "id": "",
         "tag": "density",
         "smiles": [map_smiles(smiles) for smiles in ["CO"]],
         "x": [1.0],
@@ -46,7 +46,7 @@ def mock_density_pure() -> DataEntry:
 @pytest.fixture
 def mock_density_binary() -> DataEntry:
     return {
-        "id": None,
+        "id": "",
         "tag": "density",
         "smiles": [map_smiles(smiles) for smiles in ["CCO", "CO"]],
         "x": [0.5, 0.5],
@@ -60,7 +60,7 @@ def mock_density_binary() -> DataEntry:
 
 
 @pytest.fixture
-def mock_hvap() -> DataEntry:
+def mock_hvap() -> dict:
     return {
         "tag": "hvap",
         "smiles": [map_smiles(smiles) for smiles in ["CCCC"]],
@@ -75,7 +75,7 @@ def mock_hvap() -> DataEntry:
 
 
 @pytest.fixture
-def mock_hmix() -> DataEntry:
+def mock_hmix() -> dict:
     return {
         "tag": "hmix",
         "smiles": [map_smiles(smiles) for smiles in ["CCO", "CO"]],
@@ -97,7 +97,8 @@ def test_create_dataset(mock_density_pure, mock_density_binary):
 
     entries = list(tyff.utils.dataset.iter_dataset(dataset))
 
-    assert entries == pytest.approx(expected_entries)
+    for actual, expected in zip(entries, expected_entries):
+        assert actual == expected
 
 
 def test_extract_smiles(mock_density_pure, mock_density_binary):
