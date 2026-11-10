@@ -97,7 +97,8 @@ def test_create_dataset(mock_density_pure, mock_density_binary):
 
     entries = list(tyff.utils.dataset.iter_dataset(dataset))
 
-    assert entries == pytest.approx(expected_entries)
+    for actual, expected in zip(entries, expected_entries):
+        assert actual == expected
 
 
 def test_extract_smiles(mock_density_pure, mock_density_binary):
