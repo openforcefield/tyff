@@ -14,8 +14,12 @@ def _get_platform(logger: logging.Logger) -> openmm.Platform:
     openmm.Platform
         The OpenMM platform to use for minimization.
     """
-
+    available_platforms = [openmm.Platform.getPlatform(i).getName() for i in range(openmm.Platform.getNumPlatforms())]
     for platform_name in ["CUDA", "OpenCL", "CPU"]:
+        if platform_name not in available_platforms:
+            logger.info(f"Could not use {platform_name} platform because it is not detected as available")
+            continue
+
         try:
             logger.info(f"Trying to use {platform_name} platform ...")
             platform = openmm.Platform.getPlatformByName(platform_name)
@@ -26,3 +30,5 @@ def _get_platform(logger: logging.Logger) -> openmm.Platform:
         logger.info(f"Successfully requested platform {platform.getName()}")
 
         return platform
+
+    raise ValueError(f"Could not find a usable OpenMM platform. Available platforms: {available_platforms}")
