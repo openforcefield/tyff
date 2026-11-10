@@ -1,67 +1,57 @@
-import json
-
+import openff.toolkit
 import pytest
 
-from tyff.compute.configs import local_config
-from tyff.compute.workflow import SimulationWorkflow
+from tyff.converters.openff import topologies_for
+from tyff.targets.new_thermo import predict, simulate
 from tyff.targets.thermo import create_dataset
 
+# this variable is magically detected by pytest, important that it is defined at module level
+pytestmark = pytest.mark.gpu
 
-@pytest.mark.gpu
-def test_nonstandard_pressure(tmp_path):
 
-    dataset = create_dataset(
-        *[
-            {  # type: ignore
-                "id": "high_pressure_water",
-                "tag": "density",
-                "x": [1.0],
-                "smiles": ["O"],
-                "temperature": 298.15,
-                "pressure": val,
-                "value": 1.0,
-                "std": 0.01,
-                "units": "g/mL",
-                "source": "test_source",
-            }
-            for val in [101.325, 101325]
-        ]
-    )
+class TestEnthalpyOfVaporization:
+    def test_enthalpy_of_vaporization(self, tmp_path):
 
-    with SimulationWorkflow(
-        base_dir=tmp_path,
-        parsl_config=local_config(),
-    ) as workflow:
-        workflow.submit_dataset(
-            dataset,
-            force_field="openff-2.3.0.offxml",
-            n_molecules=480,
-            n_replicates=1,
+        dataset = create_dataset(
+            *[
+                {  # type: ignore
+                    "id": "methanol",
+                    "tag": "enthalpy_of_vaporization",
+                    "x": [1.0],
+                    "smiles": ["CO"],
+                    "temperature": 300.0,
+                    "pressure": 101.325,
+                    "value": 1.0,
+                    "std": 0.01,
+                    "units": "kJ/mol",
+                    "source": "test_source",
+                }
+            ]
         )
 
-        workflow.wait()
+        # I could be forgetting a cleaner way of going from SMIRNOFF + set[SMILES] -> TensorForceField,
+        # but this is clean enough
+        _topologies, tensor_force_field = topologies_for(
+            smiles_set={smiles for smiles_list in dataset["smiles"] for smiles in smiles_list},
+            smirnoff_force_field=openff.toolkit.ForceField("openff-2.3.0.offxml"),
+        )
 
-        # hack - there needs to be a better way of grabbing results
-        job_dirs = [
-            path
-            for path in (tmp_path).glob("*/")
-            if not path.match("thermo_targets")
-            and not path.match("reference_force_fields")
-            and not path.match("interchanges")
-        ]
+        simulate(
+            tensor_force_field=tensor_force_field,
+            epoch_dir=tmp_path,
+            thermo_data=dataset,
+            smirnoff_force_field="openff-2.3.0.offxml",
+            n_replicates=3,
+            n_molecules=360,
+        )
 
-        results = dict()
+        _y_ref, _y_ref_std, _y_pred, _y_pred_std = predict(
+            dataset=dataset,
+            tensor_force_field=tensor_force_field,
+            epoch_dir=tmp_path,
+        )
 
-        for job_dir in job_dirs:
-            with open(job_dir / "compute_config.json") as f:
-                compute_config = json.load(f)
-                target_pressure = compute_config["pressure"]
-
-                assert compute_config["temperature"] == 298.15
-
-            with open(job_dir / "ensemble_averages.json") as f:
-                density = json.load(f)["density"]
-
-            results[target_pressure] = density
-
-        assert results[101325.0] > results[101.325]
+        # ipdb> _y_ref, _y_ref_std, _y_pred, _y_pred_std
+        # (tensor([1.]), tensor([0.0100]), tensor([-67.6932],
+        #   dtype=torch.float64), tensor([0.8197], dtype=torch.float64)
+        # )

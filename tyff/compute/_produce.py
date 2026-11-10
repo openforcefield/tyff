@@ -12,6 +12,7 @@ from tyff.compute._files import (
     EquilibrationFiles,
     ProductionFiles,
 )
+from tyff.compute._openmm import _get_platform
 from tyff.configs.liquid import BulkLiquid
 from tyff.exceptions import PressureNotDefinedError
 
@@ -67,6 +68,7 @@ def _run_production(
         topology,
         system,
         integrator,
+        platform=_get_platform(logger),
     )
 
     try:
@@ -144,11 +146,9 @@ def _run_production(
 
     logger.info("Running 100,000 steps of MD")
 
-    platform = simulation.context.getPlatform()
-    platform_name = platform.getName()
+    detected_platform = simulation.context.getPlatform().getName()
 
-    # Log or print the result
-    logger.info(f"Using OpenMM platform: {platform_name}")
+    logger.info(f"Using OpenMM platform: {detected_platform}")
 
     for index in range(10):
         logger.info(f"Running from step {index * 10_000} to step {(index + 1) * 10_000}")

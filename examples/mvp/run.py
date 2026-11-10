@@ -43,9 +43,6 @@ def load_datasets(root: Path) -> tuple[Dataset, Dataset]:
     thermo_data = Dataset.load_from_disk(root / "data/thermo")
     energy_data = Dataset.load_from_disk(root / "data/energy")
 
-    # temporary - need to go back and add dhmix, dhvap, etc.
-    thermo_data = thermo_data.filter(lambda x: x["tag"] == "density")
-
     logger.info(f"Loaded {len(thermo_data)} thermo entries and {len(energy_data)} energy entries")
 
     return thermo_data, energy_data
@@ -102,7 +99,7 @@ def main(root: Path) -> None:
 
         # no return value?
         simulate(
-            force_field=current_ff,
+            tensor_force_field=current_ff,
             epoch_dir=root / f"EPOCH_{epoch}",
             thermo_data=thermo_data,
             smirnoff_force_field=INITIAL_FORCE_FIELD,
@@ -112,7 +109,7 @@ def main(root: Path) -> None:
 
         y_ref, _y_ref_std, y_pred, _y_pred_std = predict(
             dataset=thermo_data,
-            force_field=current_ff,
+            tensor_force_field=current_ff,
             epoch_dir=root / f"EPOCH_{epoch}",
         )
 

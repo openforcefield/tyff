@@ -7,7 +7,7 @@ platforms = ["linux-64", "osx-arm64"]
 run_mvp = "python examples/mvp/run.py"
 run_mypy = "python -m mypy -p 'tyff'"
 run_tests = { cmd = "python -m pytest -n logical tyff/_tests", env = { OPENMM_DEFAULT_PLATFORM = "CPU" } }
-run_gpu_tests = { cmd = "python -m pytest -n 1 --run-gpu -m gpu tyff/_tests --color=no", env = { OPENMM_DEFAULT_PLATFORM = "GPU" } }
+run_gpu_tests = { cmd = "python -m pytest -n 1 --run-gpu -m gpu tyff/_tests --color=no", env = { OPENMM_DEFAULT_PLATFORM = "OpenCL" } }
 dev_tests = { cmd = "python -m pytest -s -x --pdb --lf tyff/_tests", env = { OPENMM_DEFAULT_PLATFORM = "CPU" } }
 
 [dependencies]

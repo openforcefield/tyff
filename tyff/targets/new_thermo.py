@@ -4,6 +4,7 @@ from pathlib import Path
 import torch
 from datasets import Dataset
 from openff.toolkit import ForceField
+from openff.units import unit
 
 import tyff
 import tyff.converters
@@ -16,7 +17,7 @@ from tyff.targets.thermo import DataEntry
 
 
 def simulate(
-    force_field: tyff.TensorForceField,
+    tensor_force_field: tyff.TensorForceField,
     epoch_dir: Path,
     thermo_data: Dataset,
     smirnoff_force_field: str,
@@ -30,14 +31,14 @@ def simulate(
 
     Parameters
     ----------
-    force_field : tyff.TensorForceField
-        The force field to be used in the simulation.
+    tensor_force_field : tyff.TensorForceField
+        The (tensor) force field to be used in the simulation.
     epoch_dir : Path
         The directory for this epoch where simulation results will be stored.
     thermo_data : Dataset
         The dataset containing thermodynamic data for the simulation.
     smirnoff_force_field : str
-        The path to the original SMIRNOFF force field corresponding to the tensor force field.
+        The path to the original (SMIRNOFF) force field corresponding to the tensor force field.
     n_molecules : int
         The number of molecules to simulate.
     n_replicates : int
@@ -51,7 +52,7 @@ def simulate(
     # write out this epoch's (tensor) force field as a SMIRNOFF force field
     current_smirnoff_force_field = convert_tensor_force_field(
         original_force_field=ForceField(smirnoff_force_field),
-        tensor_force_field=force_field,
+        tensor_force_field=tensor_force_field,
     )
 
     epoch_dir.mkdir(exist_ok=True)
@@ -65,7 +66,7 @@ def simulate(
     ) as workflow:
         workflow.submit_dataset(
             dataset=thermo_data,
-            tensor_force_field=force_field,
+            tensor_force_field=tensor_force_field,
             force_field=smirnoff_force_field_file,  # possibly smoother to pass through openff.toolkit.ForceField
             n_molecules=n_molecules,
             n_replicates=n_replicates,
@@ -83,6 +84,15 @@ def load_remote_observables(
     Load observables and attach to graph.
 
     Returns a mapping between job IDs and associated observables.
+
+    Parameters
+    ----------
+    force_field_per_epoch : tyff.TensorForceField
+        The tensor force field used for the simulations.
+    base_dir : Path
+        The base directory where simulation results are stored.
+    job_ids : list[str]
+        A 1-D list of job IDs corresponding to the simulations.
     """
     from tyff.mm._ops import _pack_force_field
 
@@ -132,13 +142,14 @@ def compute_properties(
     with open(epoch_dir / "simulations" / "target_job_map.json") as f:
         target_compute_mapping = {tuple(k): v for k, v in json.load(f)}
 
+    # TODO: Wrap this all up into SimulationWorkflow.estimate_dataset
     for entry in dataset:  # type: ignore
         entry: DataEntry
         if entry["tag"] == "density":
             # this lookup can be improved, but INITIAL_FORCE_FIELD
             # gets mutated by this point so it's not so straightforward
-            for as_submitted, job_ids in target_compute_mapping.items():
-                if as_submitted[0] == entry["id"]:
+            for (target_id, *_), job_ids in target_compute_mapping.items():
+                if target_id == entry["id"]:
                     break
 
             # this is set with an iteration variable - can we assume that
@@ -169,7 +180,91 @@ def compute_properties(
         elif entry["tag"] == "excess_molar_volume":
             raise NotImplementedError()
         elif entry["tag"] == "enthalpy_of_vaporization":
-            raise NotImplementedError()
+            for (target_id, *_), job_ids in target_compute_mapping.items():
+                if target_id == entry["id"]:
+                    break
+
+            values = list()
+
+            for job_ids_in_this_replicate in job_ids:
+                assert len(job_ids_in_this_replicate) == 2, (
+                    "Enthalpy of vaporization requires two jobs (gas and liquid)"
+                )
+                with (
+                    open(
+                        epoch_dir / "simulations" / job_ids_in_this_replicate[0] / "compute_config.json",
+                    ) as f0,
+                    open(epoch_dir / "simulations" / job_ids_in_this_replicate[1] / "compute_config.json") as f1,
+                ):
+                    compute_config0 = json.load(f0)
+                    compute_config1 = json.load(f1)
+
+                    if compute_config0["tag"] == "liquid" and compute_config1["tag"] == "gas":
+                        liquid_job_id = job_ids_in_this_replicate[0]
+                        liquid_config = compute_config0
+
+                        gas_job_id = job_ids_in_this_replicate[1]
+                        gas_config = compute_config1
+
+                    elif compute_config0["tag"] == "gas" and compute_config1["tag"] == "liquid":
+                        gas_job_id = job_ids_in_this_replicate[0]
+                        gas_config = compute_config0
+
+                        liquid_job_id = job_ids_in_this_replicate[1]
+                        liquid_config = compute_config1
+
+                    else:
+                        raise ValueError(
+                            f"Unexpected conmpute configs with tags {compute_config0['tag']} and "
+                            f"{compute_config1['tag']}"
+                        )
+
+                assert gas_config["temperature"] == liquid_config["temperature"], (
+                    "Gas and liquid temperatures must be the same for dHvap calculation"
+                )
+
+                # these are probably kcal/mol, not kJ
+                enthalpy_gas = observables[gas_job_id]["potential_energy"]
+                enthalpy_liquid = observables[liquid_job_id]["potential_energy"]
+
+                n_molecules = liquid_config["n_molecules"]
+
+                R = (1 * unit.avogadro_number * unit.boltzmann_constant).m_as("kJ/K")
+
+                print(
+                    f"Enthalpy of vaporization calculation: {enthalpy_gas=}, {enthalpy_liquid=}, "
+                    f"{n_molecules=}, {R=}, {gas_config['temperature']=}"
+                )
+
+                # Enthalpy of vaporization calculation:
+                #   enthalpy_gas=tensor(314.2987, dtype=torch.float64),
+                #   enthalpy_liquid=tensor(138130.4375, dtype=torch.float64),
+                #   n_molecules=360,
+                #   R=0.00831446261815324,
+                #   gas_config['temperature']=300.0
+                # Enthalpy of vaporization calculation:
+                #   enthalpy_gas=tensor(311.2487, dtype=torch.float64),
+                #   enthalpy_liquid=tensor(138186.0469, dtype=torch.float64),
+                #   n_molecules=360,
+                #   R=0.00831446261815324,
+                #   gas_config['temperature']=300.0
+                # Enthalpy of vaporization calculation:
+                #   enthalpy_gas=tensor(313.9513, dtype=torch.float64),
+                #   enthalpy_liquid=tensor(138701.0781, dtype=torch.float64),
+                #   n_molecules=360,
+                #   R=0.00831446261815324,
+                #   gas_config['temperature']=300.0
+
+                dhvap = enthalpy_gas - enthalpy_liquid / n_molecules + R * gas_config["temperature"]  # kJ/mol
+
+                values.append(dhvap)
+
+            # assume the types of observables are uniform across all these job IDs
+            types_of_observables = [*observables[job_ids[0][0]].keys()]
+
+            mean: dict[str, torch.Tensor] = {key: torch.stack(values).mean() for key in types_of_observables}
+            std: dict[str, torch.Tensor] = {key: torch.stack(values).std() for key in types_of_observables}
+
         else:
             raise ValueError(f"I do not know what to do with {entry['tag']}")
 
@@ -180,7 +275,7 @@ def compute_properties(
 
 def predict(
     dataset: Dataset,
-    force_field: tyff.TensorForceField,
+    tensor_force_field: tyff.TensorForceField,
     epoch_dir: Path,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     # in order to get all of the (remote) observables for all simulations run from this
@@ -197,14 +292,15 @@ def predict(
     # and condense down to one value (dhvap) to be reported
     job_ids: list[str] = list()
 
-    for (target_id, _, _, _), these_job_ids in target_compute_mapping.items():
+    for (target_id, _target_tag, _, _, _), these_job_ids in target_compute_mapping.items():
         if target_id in this_datasets_ids:
             job_ids.extend(these_job_ids)
 
-    # see comment above
-    job_ids = [x[0] for x in job_ids]
-
-    attached_observables = load_remote_observables(force_field, epoch_dir, job_ids)
+    attached_observables = load_remote_observables(
+        force_field_per_epoch=tensor_force_field,
+        base_dir=epoch_dir,
+        job_ids=[x for sublist in job_ids for x in sublist],
+    )
 
     means_and_stds: list[tuple[dict[str, torch.Tensor], dict[str, torch.Tensor]]] = compute_properties(
         dataset=dataset,

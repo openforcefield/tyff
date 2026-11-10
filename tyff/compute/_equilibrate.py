@@ -10,6 +10,7 @@ from tyff.compute._files import (
     EquilibrationFiles,
     MinimizationFiles,
 )
+from tyff.compute._openmm import _get_platform
 from tyff.configs.liquid import BulkLiquid
 from tyff.exceptions import PressureNotDefinedError
 
@@ -71,6 +72,7 @@ def _run_equilibration(
         topology,
         system,
         integrator,
+        platform=_get_platform(logger),
     )
 
     try:
