@@ -2,7 +2,7 @@ import numpy
 import openmm.unit
 import pytest
 import torch
-import uncertainties
+import uncertainties.unumpy
 
 import tyff.mm
 import tyff.utils.dataset
@@ -30,7 +30,7 @@ from tyff.targets.thermo import (
 @pytest.fixture
 def mock_density_pure() -> DataEntry:
     return {
-        "id": "",
+        "id": None,
         "tag": "density",
         "smiles": [map_smiles(smiles) for smiles in ["CO"]],
         "x": [1.0],
@@ -46,7 +46,7 @@ def mock_density_pure() -> DataEntry:
 @pytest.fixture
 def mock_density_binary() -> DataEntry:
     return {
-        "id": "",
+        "id": None,
         "tag": "density",
         "smiles": [map_smiles(smiles) for smiles in ["CCO", "CO"]],
         "x": [0.5, 0.5],
@@ -60,7 +60,7 @@ def mock_density_binary() -> DataEntry:
 
 
 @pytest.fixture
-def mock_hvap() -> dict:
+def mock_hvap() -> DataEntry:
     return {
         "tag": "hvap",
         "smiles": [map_smiles(smiles) for smiles in ["CCCC"]],
@@ -75,7 +75,7 @@ def mock_hvap() -> dict:
 
 
 @pytest.fixture
-def mock_hmix() -> dict:
+def mock_hmix() -> DataEntry:
     return {
         "tag": "hmix",
         "smiles": [map_smiles(smiles) for smiles in ["CCO", "CO"]],
