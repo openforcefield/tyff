@@ -83,24 +83,18 @@ def main(root: Path) -> None:
         },
         attributes={},
     )
-    # these is the torch representation - the thing that is being optimized
+
     theta = trainable.to_values().requires_grad_(True)
 
-    # here's where the L-M optimizer could be put in - some scientific quesitons about which is better
+    # TODO: Possible drop in L-M optimizer
     optimizer = Adam([theta], lr=0.01)
 
     # TODO: inner/outer loop, or any way of stepping through QM optimization
     #       without running MD jobs each time
     for epoch in range(N_EPOCHS):
-        # maybe do this outside of loop for iteration 0, then
-        # at end of loop for [1, ..., N_EPOCHS]?
-
-        # current_ff is linked under the hood to theta - need to keep them linked to keep gradients together
+        # this is linked under the hood to theta - needed to gradients together
         current_ff = trainable.to_force_field(theta)  # 287
 
-        # sum(t.numel() for t in _pack_force_field(ref)[0] if t is not None)
-
-        # no return value?
         simulate(
             force_field=current_ff,
             epoch_dir=root / f"EPOCH_{epoch}",
@@ -116,21 +110,19 @@ def main(root: Path) -> None:
             epoch_dir=root / f"EPOCH_{epoch}",
         )
 
-        if MERGE_DATA:
-            energy_ref, energy_pred, forces_ref, forces_pred = energy.predict(
-                energy_data,
-                current_ff,
-                topologies,
-                normalize=False,
-            )
+        energy_ref, energy_pred, forces_ref, forces_pred = energy.predict(
+            energy_data,
+            current_ff,
+            topologies,
+            normalize=False,
+        )
 
-            loss = (
-                COEFFICIENTS["energy"] * (energy_pred - energy_ref).square().mean()
-                + COEFFICIENTS["force"] * (forces_pred - forces_ref).square().mean()
-                + COEFFICIENTS["thermo"] * (y_pred - y_ref).square().mean()
-            )
-        else:
-            loss = (y_pred - y_ref).square().mean()
+        # can construct loss function in many different ways, including modifying coefficients
+        loss = (
+            COEFFICIENTS["energy"] * (energy_pred - energy_ref).square().mean()
+            + COEFFICIENTS["force"] * (forces_pred - forces_ref).square().mean()
+            + COEFFICIENTS["thermo"] * (y_pred - y_ref).square().mean()
+        )
 
         logger.info(f"EPOCH {epoch}: loss={loss.item():.6f}")
         print(f"EPOCH {epoch}: loss={loss.item():.6f}")
