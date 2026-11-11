@@ -16,7 +16,7 @@ from tyff.train import ParameterConfig, Trainable
 
 N_EPOCHS = 10
 N_REPLICATES = 1
-N_MOLECULES = 400
+N_MOLECULES = 480
 INITIAL_FORCE_FIELD = "openff-2.3.0.offxml"
 
 MERGE_DATA = True
