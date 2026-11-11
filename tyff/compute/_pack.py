@@ -41,7 +41,7 @@ def _prepare_packed_topology(
     time.sleep(n_molecules * 0.001)
     packed_topology_file = f"{job_dir}/packed_topology.pdb"
 
-    molecules = [Molecule.from_smiles(smiles) for smiles in compute_config["smiles"]]
+    molecules = [Molecule.from_mapped_smiles(smiles) for smiles in compute_config["smiles"]]
 
     n_copies = [int(n_molecules * x) for x in compute_config["x"]]
 
