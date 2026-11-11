@@ -59,6 +59,8 @@ class TestEnthalpyOfVaporization:
 
         assert not torch.isnan(torch.stack([y_ref, y_ref_std, y_pred, y_pred_std])).any()
 
+        # experimental value is around 36 kJ/mol, could get away with much smaller range
+        assert 30 < y_pred < 50
 
 class TestEnthalpyOfMixing:
     def test_enthalpy_of_mixing(self, tmp_path):
