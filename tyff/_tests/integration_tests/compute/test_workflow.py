@@ -28,8 +28,8 @@ class TestEnthalpyOfVaporization:
                     "smiles": ["CO"],
                     "temperature": 300.0,
                     "pressure": 101.325,
-                    "value": 1.0,
-                    "std": 0.01,
+                    "value": 38.3,
+                    "std": 0.01,  # arbitrary/unused
                     "units": "kJ/mol",
                     "source": "test_source",
                 }
@@ -59,8 +59,9 @@ class TestEnthalpyOfVaporization:
 
         assert not torch.isnan(torch.stack([y_ref, y_ref_std, y_pred, y_pred_std])).any()
 
-        # experimental value is around 36 kJ/mol, could get away with much smaller range
-        assert 30 < y_pred < 50
+        # experimental value is around 38 kJ/mol, could get away with much smaller range
+        assert 30 < y_pred < 50, f"{y_pred=} {y_ref=}, {y_pred_std=}, {y_ref_std=}"
+
 
 class TestEnthalpyOfMixing:
     def test_enthalpy_of_mixing(self, tmp_path):
@@ -72,10 +73,10 @@ class TestEnthalpyOfMixing:
                     "tag": "enthalpy_of_mixing",
                     "x": [0.8, 0.2],
                     "smiles": ["O", "CCO"],
-                    "temperature": 300.0,
+                    "temperature": 298.15,
                     "pressure": 101.325,
-                    "value": -5.0,
-                    "std": 1.0,
+                    "value": -0.765,
+                    "std": 0.01,  # arbitrary/unused
                     "units": "kJ/mol",
                     "source": "test_source",
                 }
@@ -105,4 +106,5 @@ class TestEnthalpyOfMixing:
 
         assert not torch.isnan(torch.stack([y_ref, y_ref_std, y_pred, y_pred_std])).any()
 
-        assert -10 < y_pred < 0
+        # experimental value is around -0.7 kJ/mol, but it should be negative (for all concentrations)
+        assert -1 < y_pred < 0, f"{y_pred=} {y_ref=}, {y_pred_std=}, {y_ref_std=}"
