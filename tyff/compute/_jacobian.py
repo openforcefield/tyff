@@ -154,7 +154,11 @@ def _get_ensemble_average_and_jacobian(
 
     # save ensemble averages and jacobian in each job dir, consider revisiting this decision in the future
     with open(f"{job_dir}/ensemble_averages.json", "w") as f:
-        json.dump({name: value.detach().tolist() for name, value in means.items()}, f)
+        json.dump(
+            {name: value.detach().tolist() for name, value in means.items()},
+            f,
+            indent=4,
+        )
 
     with open(f"{job_dir}/jacobian.pt", "wb") as f:
         torch.save(jacobian.detach(), f)
