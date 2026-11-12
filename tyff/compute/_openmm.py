@@ -16,7 +16,7 @@ def _get_platform(logger: logging.Logger) -> openmm.Platform:
         The OpenMM platform to use for minimization.
     """
     if "OPENMM_DEFAULT_PLATFORM" in os.environ:
-        logger.info(f"Using platform set in $OPENMM_DEFAULT_PLATFORM")
+        logger.info("Using platform set in $OPENMM_DEFAULT_PLATFORM")
         logger.info(f"\t({os.environ['OPENMM_DEFAULT_PLATFORM']=})")
         return openmm.Platform.getPlatformByName(openmm.os.environ["OPENMM_DEFAULT_PLATFORM"])
 
