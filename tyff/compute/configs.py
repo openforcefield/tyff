@@ -6,7 +6,7 @@ from parsl.utils import get_all_checkpoints
 
 
 def local_config(max_workers: int = 10):
-    """For development and testing."""
+    """For development and testing on macOS."""
     if False:
         # If openff-packmol/temporary_cd was threadsafe, better to use
         # ThreadPoolExecutor and local config
@@ -24,7 +24,7 @@ def local_config(max_workers: int = 10):
                     init_blocks=1,
                     min_blocks=1,
                     max_blocks=1,
-                    worker_init=("export OPENMM_DEFAULT_PLATFORM=CPU; export OMP_NUM_THREADS=1; "),
+                    worker_init=("export OPENMM_DEFAULT_PLATFORM=OpenCL; export OMP_NUM_THREADS=1; "),
                 ),
                 max_workers_per_node=max_workers,
                 cores_per_worker=1,
