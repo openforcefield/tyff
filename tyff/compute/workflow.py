@@ -361,11 +361,9 @@ class SimulationWorkflow:
                 indent=4,
             )
 
-        if (
-            pathlib.Path(job_dir, "ensemble_averages.json").exists()
-         ) and (
+        if (pathlib.Path(job_dir, "ensemble_averages.json").exists()) and (
             pathlib.Path(job_dir, "jacobian.pt").exists()
-         ):
+        ):
             logger.info(f"short-circuiting {job_id}!")
             # already done, skip
 
