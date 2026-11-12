@@ -73,7 +73,7 @@ class SimulationWorkflow:
 
         logger.info(f"Initialized SimulationWorkflow with base_dir={base_dir}")
 
-        parsl.load(parsl_config)
+        self._config = parsl_config
 
         logger.info("Parsl config loaded")
 
@@ -413,9 +413,14 @@ class SimulationWorkflow:
         return {"job_id": job_id, "future": jacobian_future}
 
     def shutdown(self):
+        self._dfk.cleanup()
         parsl.clear()
 
     def __enter__(self):
+        parsl.clear()
+
+        self._dfk = parsl.load(self._config)
+
         return self
 
     def __exit__(self, *args):

@@ -73,6 +73,9 @@ def simulate(
 
         workflow.wait()
 
+    # here may be a place to free up memory, i.e. `del workflow` or something more involved with Parsl
+    # but this probably should be handled automatically by SimulationWorkflow?
+
 
 def load_remote_observables(
     force_field_per_epoch: tyff.TensorForceField,
