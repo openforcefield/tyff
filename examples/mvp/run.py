@@ -64,9 +64,7 @@ def main(root: Path) -> None:
         smiles_set={
             *thermo.extract_smiles(thermo_data),
             *energy.extract_smiles(energy_data),
-        }
-        if MERGE_DATA
-        else {*thermo.extract_smiles(thermo_data)},
+        },
         smirnoff_force_field=ForceField(INITIAL_FORCE_FIELD),
     )
 

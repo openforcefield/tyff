@@ -24,28 +24,6 @@ _KCAL_PER_MOLE = openff.units.unit.kilocalories / openff.units.unit.mole
 _E = openff.units.unit.elementary_charge
 
 
-def pytest_addoption(parser):
-    parser.addoption(
-        "--run-gpu",
-        action="store_true",
-        default=False,
-        help="run tests marked with @pytest.mark.gpu",
-    )
-
-
-def pytest_configure(config):
-    config.addinivalue_line("markers", "gpu: tests that require a GPU (skipped unless --run-gpu is given)")
-
-
-def pytest_collection_modifyitems(config, items):
-    if config.getoption("--run-gpu"):
-        return
-    skip_gpu = pytest.mark.skip(reason="need --run-gpu option to run")
-    for item in items:
-        if "gpu" in item.keywords:
-            item.add_marker(skip_gpu)
-
-
 @pytest.fixture
 def density_entry() -> DataEntry:
     return {
