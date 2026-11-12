@@ -122,7 +122,7 @@ def main(root: Path) -> None:
 
         logger.info(f"EPOCH {epoch}: loss={loss.item():.6f}")
         print(f"EPOCH {epoch}: loss={loss.item():.6f}")
-        print(f"\tloss component energy (after applying {COEFFICIENTS=}")
+        print(f"\tloss component energy (after applying {COEFFICIENTS=})")
         print(f"\tenergy {COEFFICIENTS['energy'] * (energy_pred - energy_ref).square().mean()}")
         print(f"\tforce {COEFFICIENTS['force'] * (forces_pred - forces_ref).square().mean()}")
         print(f"\tthermo {COEFFICIENTS['thermo'] * (y_pred - y_ref).square().mean()}")
