@@ -19,8 +19,6 @@ N_REPLICATES = 2
 N_MOLECULES = 200
 INITIAL_FORCE_FIELD = "openff-2.3.0.offxml"
 
-MERGE_DATA = True
-
 # these weights should be exposed to the user in some sort of training config
 # probably a good phase II task
 COEFFICIENTS = {
