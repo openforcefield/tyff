@@ -10,6 +10,7 @@ from tyff.compute._files import (
     EquilibrationFiles,
     MinimizationFiles,
 )
+from tyff.compute._openmm import _get_platform
 from tyff.configs.liquid import BulkLiquid
 from tyff.exceptions import PressureNotDefinedError
 
@@ -71,6 +72,7 @@ def _run_equilibration(
         topology,
         system,
         integrator,
+        platform=_get_platform(logger),
     )
 
     try:
@@ -142,7 +144,7 @@ def _run_equilibration(
             output_file=files["msgpack_trajectory"].filepath,
             report_interval=1000,
             beta=1.0 / (openmm.unit.MOLAR_GAS_CONSTANT_R * compute_config["temperature"] * openmm.unit.kelvin),
-            pressure=pressure if pressure is None else openmm.unit.kilopascal,
+            pressure=pressure if pressure is None else pressure * openmm.unit.kilopascal,
         )
     )
 
@@ -152,7 +154,10 @@ def _run_equilibration(
 
     logger.info(f"Using OpenMM platform: {detected_platform}")
 
-    simulation.step(10_000)
+    try:
+        simulation.step(10_000)
+    except openmm.OpenMMException as error:
+        raise RuntimeError(f"OpenMM crashed during equilibration in {job_dir=}") from error
 
     with open(files["topology"].filepath, "w") as f:
         openmm.app.PDBFile.writeFile(

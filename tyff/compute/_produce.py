@@ -12,6 +12,7 @@ from tyff.compute._files import (
     EquilibrationFiles,
     ProductionFiles,
 )
+from tyff.compute._openmm import _get_platform
 from tyff.configs.liquid import BulkLiquid
 from tyff.exceptions import PressureNotDefinedError
 
@@ -67,6 +68,7 @@ def _run_production(
         topology,
         system,
         integrator,
+        platform=_get_platform(logger),
     )
 
     try:
@@ -138,21 +140,22 @@ def _run_production(
             output_file=files["msgpack_trajectory"].filepath,
             report_interval=1000,
             beta=1.0 / (openmm.unit.MOLAR_GAS_CONSTANT_R * compute_config["temperature"] * openmm.unit.kelvin),
-            pressure=pressure if pressure is None else openmm.unit.kilopascal,
+            pressure=pressure if pressure is None else pressure * openmm.unit.kilopascal,
         )
     )
 
     logger.info("Running 100,000 steps of MD")
 
-    platform = simulation.context.getPlatform()
-    platform_name = platform.getName()
+    detected_platform = simulation.context.getPlatform().getName()
 
-    # Log or print the result
-    logger.info(f"Using OpenMM platform: {platform_name}")
+    logger.info(f"Using OpenMM platform: {detected_platform}")
 
     for index in range(10):
         logger.info(f"Running from step {index * 10_000} to step {(index + 1) * 10_000}")
-        simulation.step(10_000)
+        try:
+            simulation.step(10_000)
+        except openmm.OpenMMException as error:
+            raise RuntimeError(f"OpenMM crashed during production run in {job_dir=}") from error
 
     with open(files["topology"].filepath, "w") as f:
         openmm.app.PDBFile.writeFile(

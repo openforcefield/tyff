@@ -6,6 +6,7 @@ from openff.toolkit import Topology
 from parsl import File
 
 from tyff.compute._files import MinimizationFiles, PreparingFiles
+from tyff.compute._openmm import _get_platform
 from tyff.configs.liquid import BulkLiquid
 
 
@@ -49,20 +50,12 @@ def _minimize_energy(
     # this should be in Kelvin
     temperature = compute_config["temperature"]
 
-    molecules = [Molecule.from_smiles(smiles) for smiles in compute_config["smiles"]]
+    molecules = [Molecule.from_mapped_smiles(smiles) for smiles in compute_config["smiles"]]
 
     topology = Topology.from_pdb(
         system_future["prepared_files"]["packed_topology"].filepath,
         unique_molecules=molecules,
     )
-
-    try:
-        platform = openmm.Platform.getPlatformByName("CUDA")
-        logger.info("Trying to use CUDA platform ...")
-    except (openmm.OpenMMException, Exception) as error:
-        platform = openmm.Platform.getPlatformByName("CPU")
-        logger.info(f"Could not use CUDA platform because {error}")
-        logger.info("Trying to use CPU platform ...")
 
     simulation = openmm.app.Simulation(
         topology=topology.to_openmm(),
@@ -72,7 +65,7 @@ def _minimize_energy(
             1.0 / openmm.unit.picosecond,
             1.0 * openmm.unit.femtoseconds,  # TODO: This should be user input
         ),
-        platform=platform,
+        platform=_get_platform(logger),
     )
 
     simulation.context.setPositions(topology.get_positions().to_openmm())
@@ -83,7 +76,10 @@ def _minimize_energy(
 
     original_state = simulation.context.getState(energy=True)
 
-    simulation.minimizeEnergy()
+    try:
+        simulation.minimizeEnergy()
+    except openmm.OpenMMException as error:
+        raise RuntimeError(f"OpenMM crashed during minimization in {job_dir=}") from error
 
     final_state = simulation.context.getState(energy=True, positions=True)
 
