@@ -55,7 +55,8 @@ panel = "*"
 py312amber = ["py312", "ambertools", "test", "typing"]
 py312openeye = ["py312", "openeye", "packmol", "test", "typing"]
 dev = ["py312", "openeye", "test", "typing", "dev"]
-hpc3 = ["py312", "openeye", "cu130", "packmol"]
+hpc3 = ["py312", "test", "openeye", "cu130", "packmol"]
+gpu = ["py312", "openeye", "cu130", "packmol"]
 
 [feature.dev.dependencies]
 # these PyPI builds are marked as pre-release only for some reason
