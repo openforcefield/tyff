@@ -1,20 +1,17 @@
+import platform
+
 from parsl.config import Config
-from parsl.executors import HighThroughputExecutor, ThreadPoolExecutor
+from parsl.executors import HighThroughputExecutor
 from parsl.monitoring.monitoring import MonitoringHub
 from parsl.providers import LocalProvider, SlurmProvider
-from parsl.utils import get_all_checkpoints
 
 
 def local_config(max_workers: int = 10):
-    """For development and testing."""
-    if False:
-        # If openff-packmol/temporary_cd was threadsafe, better to use
-        # ThreadPoolExecutor and local config
-        return Config(
-            executors=[ThreadPoolExecutor(label="local")],
-            checkpoint_mode="task_exit",
-            checkpoint_files=get_all_checkpoints(),
-        )
+    """For development and testing - CPU, but force OpenCL on macOS."""
+    worker_init = "export OMP_NUM_THREADS=1; "
+
+    if platform.system() == "Darwin":
+        worker_init += "export OPENMM_DEFAULT_PLATFORM=OpenCL; "
 
     return Config(
         executors=[
@@ -24,7 +21,7 @@ def local_config(max_workers: int = 10):
                     init_blocks=1,
                     min_blocks=1,
                     max_blocks=1,
-                    worker_init=("export OPENMM_DEFAULT_PLATFORM=CPU; export OMP_NUM_THREADS=1; "),
+                    worker_init=worker_init,
                 ),
                 max_workers_per_node=max_workers,
                 cores_per_worker=1,

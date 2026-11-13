@@ -12,13 +12,13 @@ from tyff.configs.liquid import BulkLiquid
 
 @pytest.fixture
 def bulk_liquid() -> BulkLiquid:
-    return BulkLiquid(
+    return BulkLiquid(  # type: ignore
         tag="liquid",
         # TODO: might make tests quicker to have a slimmed-down Sage with fewer parameters
         # (but still use AshGC charges)
         force_field="openff-2.3.0.offxml",
         n_molecules=100,
-        smiles=["CC", "O"],
+        smiles=["[H:3][C:1]([H:4])([H:5])[C:2]([H:6])([H:7])[H:8]", "[H:2][O:1][H:3]"],
         x=[0.6, 0.4],
         temperature=301.15,
         pressure=101.325,
