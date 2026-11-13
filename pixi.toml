@@ -83,9 +83,6 @@ cuda-version = "==13.0"
 [feature.py312.dependencies]
 python = "3.12.*"
 
-[feature.test.dependencies]
-pytest = "<9.2"
-
 [feature.test.pypi-dependencies]
 pytest = ">=9.2"
 pytest-cov = "*"
