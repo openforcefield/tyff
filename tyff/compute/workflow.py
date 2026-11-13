@@ -206,13 +206,6 @@ class SimulationWorkflow:
         with open(pathlib.Path(self.base_dir) / "thermo_targets" / "targets.json", "w") as f:
             json.dump(targets, f, indent=4)
 
-        unique_smiles = set()
-
-        for target in dataset:
-            target: DataEntry
-            for smiles_ in target["smiles"]:
-                unique_smiles.add(smiles_)
-
         logger.info(
             "Writing reference force field from path (which is probably outside of "
             f"this workflow's root): {force_field=}"
