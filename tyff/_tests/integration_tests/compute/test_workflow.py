@@ -1,9 +1,12 @@
 import json
 
+import openff.toolkit
 import pytest
 
 from tyff.compute.configs import local_config
 from tyff.compute.workflow import SimulationWorkflow
+from tyff.converters import topologies_for
+from tyff.targets import thermo
 from tyff.targets.thermo import create_dataset
 
 
@@ -28,12 +31,18 @@ def test_nonstandard_pressure(tmp_path):
         ]
     )
 
+    _topologies, tensor_force_field = topologies_for(
+        smiles_set={*thermo.extract_smiles(dataset)},
+        smirnoff_force_field=openff.toolkit.ForceField("openff-2.3.0.offxml"),
+    )
+
     with SimulationWorkflow(
         base_dir=tmp_path,
         parsl_config=local_config(),
     ) as workflow:
         workflow.submit_dataset(
             dataset,
+            tensor_force_field=tensor_force_field,
             force_field="openff-2.3.0.offxml",
             n_molecules=480,
             n_replicates=1,
@@ -41,7 +50,8 @@ def test_nonstandard_pressure(tmp_path):
 
         workflow.wait()
 
-        # hack - there needs to be a better way of grabbing results
+        # TODO: Replace this with tyff.targets.new_thermo.predict, which
+        #       itself should probably be moved to SimulationWorkflow.estimate_dataset
         job_dirs = [
             path
             for path in (tmp_path).glob("*/")
