@@ -15,8 +15,8 @@ from tyff.targets.new_thermo import predict, simulate
 from tyff.train import ParameterConfig, Trainable
 
 N_EPOCHS = 10
-N_REPLICATES = 2
-N_MOLECULES = 200
+N_REPLICATES = 1
+N_MOLECULES = 480
 INITIAL_FORCE_FIELD = "openff-2.3.0.offxml"
 
 # these weights should be exposed to the user in some sort of training config
@@ -40,9 +40,6 @@ def load_datasets(root: Path) -> tuple[Dataset, Dataset]:
 
     thermo_data = Dataset.load_from_disk(root / "data/thermo")
     energy_data = Dataset.load_from_disk(root / "data/energy")
-
-    # temporary - need to go back and add dhmix, dhvap, etc.
-    thermo_data = thermo_data.filter(lambda x: x["tag"] == "density")
 
     logger.info(f"Loaded {len(thermo_data)} thermo entries and {len(energy_data)} energy entries")
 
@@ -82,17 +79,17 @@ def main(root: Path) -> None:
 
     theta = trainable.to_values().requires_grad_(True)
 
-    # TODO: Possible drop in L-M optimizer
+    # TODO: Possibly drop in L-M optimizer
     optimizer = Adam([theta], lr=0.01)
 
     # TODO: inner/outer loop, or any way of stepping through QM optimization
     #       without running MD jobs each time
     for epoch in range(N_EPOCHS):
-        # this is linked under the hood to theta - needed to gradients together
-        current_ff = trainable.to_force_field(theta)  # 287
+        # this is linked under the hood to theta - needed to hook gradients together
+        current_ff = trainable.to_force_field(theta)
 
         simulate(
-            force_field=current_ff,
+            tensor_force_field=current_ff,
             epoch_dir=root / f"EPOCH_{epoch}",
             thermo_data=thermo_data,
             smirnoff_force_field=INITIAL_FORCE_FIELD,
@@ -102,7 +99,7 @@ def main(root: Path) -> None:
 
         y_ref, _y_ref_std, y_pred, _y_pred_std = predict(
             dataset=thermo_data,
-            force_field=current_ff,
+            tensor_force_field=current_ff,
             epoch_dir=root / f"EPOCH_{epoch}",
         )
 
