@@ -85,7 +85,7 @@ class SimulationWorkflow:
 
         logger.info(f"Initialized SimulationWorkflow with base_dir={base_dir}")
 
-        parsl.load(parsl_config)
+        self._config = parsl_config
 
         logger.info("Parsl config loaded")
 
@@ -219,13 +219,6 @@ class SimulationWorkflow:
 
         with open(pathlib.Path(self.base_dir) / "thermo_targets" / "targets.json", "w") as f:
             json.dump(targets, f, indent=4)
-
-        unique_smiles = set()
-
-        for target in dataset:
-            target: DataEntry
-            for smiles_ in target["smiles"]:
-                unique_smiles.add(smiles_)
 
         logger.info(
             "Writing reference force field from path (which is probably outside of "
@@ -401,7 +394,9 @@ class SimulationWorkflow:
                 indent=4,
             )
 
-        if pathlib.Path(job_dir, "ensemble_averages.json").exists():
+        if (pathlib.Path(job_dir, "ensemble_averages.json").exists()) and (
+            pathlib.Path(job_dir, "jacobian.pt").exists()
+        ):
             logger.info(f"short-circuiting {job_id}!")
             # already done, skip
 
@@ -451,9 +446,14 @@ class SimulationWorkflow:
         return {"job_id": job_id, "future": jacobian_future}
 
     def shutdown(self):
+        self._dfk.cleanup()
         parsl.clear()
 
     def __enter__(self):
+        parsl.clear()
+
+        self._dfk = parsl.load(self._config)
+
         return self
 
     def __exit__(self, *args):

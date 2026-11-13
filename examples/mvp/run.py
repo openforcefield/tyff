@@ -19,8 +19,6 @@ N_REPLICATES = 1
 N_MOLECULES = 480
 INITIAL_FORCE_FIELD = "openff-2.3.0.offxml"
 
-MERGE_DATA = True
-
 # these weights should be exposed to the user in some sort of training config
 # probably a good phase II task
 COEFFICIENTS = {
@@ -63,9 +61,7 @@ def main(root: Path) -> None:
         smiles_set={
             *thermo.extract_smiles(thermo_data),
             *energy.extract_smiles(energy_data),
-        }
-        if MERGE_DATA
-        else {*thermo.extract_smiles(thermo_data)},
+        },
         smirnoff_force_field=ForceField(INITIAL_FORCE_FIELD),
     )
 
@@ -80,24 +76,18 @@ def main(root: Path) -> None:
         },
         attributes={},
     )
-    # these is the torch representation - the thing that is being optimized
+
     theta = trainable.to_values().requires_grad_(True)
 
-    # here's where the L-M optimizer could be put in - some scientific quesitons about which is better
+    # TODO: Possibly drop in L-M optimizer
     optimizer = Adam([theta], lr=0.01)
 
     # TODO: inner/outer loop, or any way of stepping through QM optimization
     #       without running MD jobs each time
     for epoch in range(N_EPOCHS):
-        # maybe do this outside of loop for iteration 0, then
-        # at end of loop for [1, ..., N_EPOCHS]?
+        # this is linked under the hood to theta - needed to hook gradients together
+        current_ff = trainable.to_force_field(theta)
 
-        # current_ff is linked under the hood to theta - need to keep them linked to keep gradients together
-        current_ff = trainable.to_force_field(theta)  # 287
-
-        # sum(t.numel() for t in _pack_force_field(ref)[0] if t is not None)
-
-        # no return value?
         simulate(
             tensor_force_field=current_ff,
             epoch_dir=root / f"EPOCH_{epoch}",
@@ -113,24 +103,26 @@ def main(root: Path) -> None:
             epoch_dir=root / f"EPOCH_{epoch}",
         )
 
-        if MERGE_DATA:
-            energy_ref, energy_pred, forces_ref, forces_pred = energy.predict(
-                energy_data,
-                current_ff,
-                topologies,
-                normalize=False,
-            )
+        energy_ref, energy_pred, forces_ref, forces_pred = energy.predict(
+            energy_data,
+            current_ff,
+            topologies,
+            normalize=False,
+        )
 
-            loss = (
-                COEFFICIENTS["energy"] * (energy_pred - energy_ref).square().mean()
-                + COEFFICIENTS["force"] * (forces_pred - forces_ref).square().mean()
-                + COEFFICIENTS["thermo"] * (y_pred - y_ref).square().mean()
-            )
-        else:
-            loss = (y_pred - y_ref).square().mean()
+        # can construct loss function in many different ways, including modifying coefficients
+        loss = (
+            COEFFICIENTS["energy"] * (energy_pred - energy_ref).square().mean()
+            + COEFFICIENTS["force"] * (forces_pred - forces_ref).square().mean()
+            + COEFFICIENTS["thermo"] * (y_pred - y_ref).square().mean()
+        )
 
         logger.info(f"EPOCH {epoch}: loss={loss.item():.6f}")
         print(f"EPOCH {epoch}: loss={loss.item():.6f}")
+        print(f"\tloss component energy (after applying {COEFFICIENTS=})")
+        print(f"\tenergy {COEFFICIENTS['energy'] * (energy_pred - energy_ref).square().mean()}")
+        print(f"\tforce {COEFFICIENTS['force'] * (forces_pred - forces_ref).square().mean()}")
+        print(f"\tthermo {COEFFICIENTS['thermo'] * (y_pred - y_ref).square().mean()}")
 
         optimizer.zero_grad()
 
