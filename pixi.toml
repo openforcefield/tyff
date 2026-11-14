@@ -56,7 +56,7 @@ py312amber = ["py312", "ambertools", "test", "typing"]
 py312openeye = ["py312", "openeye", "packmol", "test", "typing"]
 dev = ["py312", "openeye", "test", "typing", "dev"]
 hpc3 = ["py312", "openeye", "cu130", "packmol"]
-gpu = ["py312", "test", "openeye", "cu129", "packmol"]
+gpu = ["py312", "test", "openeye", "cu130", "packmol"]
 
 [feature.dev.dependencies]
 # these PyPI builds are marked as pre-release only for some reason
@@ -81,9 +81,6 @@ packmol = ">=20"
 
 [feature.cu130.dependencies]
 cuda-version = "==13.0"
-
-[feature.cu129.dependencies]
-cuda-version = "==12.9"
 
 [feature.py312.dependencies]
 python = "3.12.*"
