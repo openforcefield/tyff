@@ -99,4 +99,4 @@ types-requests = "*"
 
 # for AWS runner only
 [feature.gpu.pypi-dependencies]
-openmm = { version = "*", extras = ["cuda12"]}
+openmm = { version = "*", extras = ["cuda12"] }
