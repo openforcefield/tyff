@@ -55,8 +55,8 @@ panel = "*"
 py312amber = ["py312", "ambertools", "test", "typing"]
 py312openeye = ["py312", "openeye", "packmol", "test", "typing"]
 dev = ["py312", "openeye", "test", "typing", "dev"]
-hpc3 = ["py312", "openeye", "cu130", "packmol"]
-gpu = ["py312", "test", "openeye", "packmol", "gpu"]
+hpc3 = ["py312", "cu130", "openeye", "packmol"]
+gpu = ["py312", "cu122", "test", "openeye", "packmol"]
 
 [feature.dev.dependencies]
 # these PyPI builds are marked as pre-release only for some reason
@@ -82,6 +82,9 @@ packmol = ">=20"
 [feature.cu130.dependencies]
 cuda-version = "==13.0"
 
+[feature.cu122.dependencies]
+cuda-version = "==12.2"
+
 [feature.py312.dependencies]
 python = "3.12.*"
 
@@ -96,7 +99,3 @@ pytest-randomly = "*"
 mypy = "*"
 types-PyYAML = "*"
 types-requests = "*"
-
-# for AWS runner only
-[feature.gpu.pypi-dependencies]
-openmm = { version = "*", extras = ["cuda12"]}
