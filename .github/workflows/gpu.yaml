@@ -70,6 +70,7 @@ jobs:
             pixi run -e gpu python -m openmm.testInstallation
             pixi run -e gpu python -c "import openmm; print(openmm.Platform.getPluginLoadFailures())"
             nvidia-smi
+            pixi run -e gpu run_gpu_tests
 
   stop-aws-runner:
     runs-on: ubuntu-latest
