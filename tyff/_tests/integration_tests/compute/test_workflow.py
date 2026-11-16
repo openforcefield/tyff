@@ -77,6 +77,7 @@ class TestEnthalpyOfVaporization:
             # experimental value is around 38 kJ/mol, could get away with much smaller range
             assert 30 < y_pred < 50, f"{y_pred=} {y_ref=}, {y_pred_std=}, {y_ref_std=}"
 
+
 class TestEnthalpyOfMixing:
     def test_enthalpy_of_mixing(self, tmp_path):
 
