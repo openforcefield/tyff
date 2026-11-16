@@ -77,48 +77,48 @@ class TestEnthalpyOfVaporization:
             # experimental value is around 38 kJ/mol, could get away with much smaller range
             assert 30 < y_pred < 50, f"{y_pred=} {y_ref=}, {y_pred_std=}, {y_ref_std=}"
 
-    class TestEnthalpyOfMixing:
-        def test_enthalpy_of_mixing(self, tmp_path):
+class TestEnthalpyOfMixing:
+    def test_enthalpy_of_mixing(self, tmp_path):
 
-            dataset = create_dataset(
-                *[
-                    {  # type: ignore
-                        "id": "foo",
-                        "tag": "enthalpy_of_mixing",
-                        "x": [0.8, 0.2],
-                        "smiles": ["O", "CCO"],
-                        "temperature": 298.15,
-                        "pressure": 101.325,
-                        "value": -0.765,
-                        "std": 0.01,  # arbitrary/unused
-                        "units": "kJ/mol",
-                        "source": "test_source",
-                    }
-                ]
-            )
+        dataset = create_dataset(
+            *[
+                {  # type: ignore
+                    "id": "foo",
+                    "tag": "enthalpy_of_mixing",
+                    "x": [0.8, 0.2],
+                    "smiles": ["O", "CCO"],
+                    "temperature": 298.15,
+                    "pressure": 101.325,
+                    "value": -0.765,
+                    "std": 0.01,  # arbitrary/unused
+                    "units": "kJ/mol",
+                    "source": "test_source",
+                }
+            ]
+        )
 
-            _topologies, tensor_force_field = topologies_for(
-                smiles_set={smiles for smiles_list in dataset["smiles"] for smiles in smiles_list},
-                smirnoff_force_field=openff.toolkit.ForceField("openff-2.3.0.offxml"),
-            )
+        _topologies, tensor_force_field = topologies_for(
+            smiles_set={smiles for smiles_list in dataset["smiles"] for smiles in smiles_list},
+            smirnoff_force_field=openff.toolkit.ForceField("openff-2.3.0.offxml"),
+        )
 
-            simulate(
-                tensor_force_field=tensor_force_field,
-                epoch_dir=Path("mixing") if USE_LOCAL_FILES else tmp_path,
-                thermo_data=dataset,
-                smirnoff_force_field="openff-2.3.0.offxml",
-                n_replicates=3,
-                n_molecules=480,
-            )
+        simulate(
+            tensor_force_field=tensor_force_field,
+            epoch_dir=Path("mixing") if USE_LOCAL_FILES else tmp_path,
+            thermo_data=dataset,
+            smirnoff_force_field="openff-2.3.0.offxml",
+            n_replicates=3,
+            n_molecules=480,
+        )
 
-            y_ref, y_ref_std, y_pred, y_pred_std = predict(
-                dataset=dataset,
-                tensor_force_field=tensor_force_field,
-                epoch_dir=Path("mixing") if USE_LOCAL_FILES else tmp_path,
-            )
+        y_ref, y_ref_std, y_pred, y_pred_std = predict(
+            dataset=dataset,
+            tensor_force_field=tensor_force_field,
+            epoch_dir=Path("mixing") if USE_LOCAL_FILES else tmp_path,
+        )
 
-            assert not torch.isnan(torch.stack([y_ref, y_ref_std, y_pred, y_pred_std])).any()
+        assert not torch.isnan(torch.stack([y_ref, y_ref_std, y_pred, y_pred_std])).any()
 
-            # experimental value is around -0.7 kJ/mol, but it should be negative (for all concentrations)
-            # and numerically somewhere in the few 0.1s of kJ/mol
-            assert -1 < y_pred < 0, f"{y_pred=} {y_ref=}, {y_pred_std=}, {y_ref_std=}"
+        # experimental value is around -0.7 kJ/mol, but it should be negative (for all concentrations)
+        # and numerically somewhere in the few 0.1s of kJ/mol
+        assert -1 < y_pred < 0, f"{y_pred=} {y_ref=}, {y_pred_std=}, {y_ref_std=}"
