@@ -1,13 +1,9 @@
+import json
 from pathlib import Path
 
 import openff.toolkit
 import pytest
 import torch
-import json
-
-import openff.toolkit
-import pytest
-from tyff.targets.thermo import create_dataset
 
 from tyff.compute.configs import local_config
 from tyff.compute.workflow import SimulationWorkflow
@@ -50,20 +46,19 @@ class TestEnthalpyOfVaporization:
             smirnoff_force_field=openff.toolkit.ForceField("openff-2.3.0.offxml"),
         )
 
-
         simulate(
-                tensor_force_field=tensor_force_field,
-                epoch_dir=Path("vaporization") if USE_LOCAL_FILES else tmp_path,
-                thermo_data=dataset,
-                smirnoff_force_field="openff-2.3.0.offxml",
-                n_replicates=2,
-                n_molecules=240,
+            tensor_force_field=tensor_force_field,
+            epoch_dir=Path("vaporization") if USE_LOCAL_FILES else tmp_path,
+            thermo_data=dataset,
+            smirnoff_force_field="openff-2.3.0.offxml",
+            n_replicates=2,
+            n_molecules=240,
         )
 
         y_ref, y_ref_std, y_pred, y_pred_std = predict(
-                dataset=dataset,
-                tensor_force_field=tensor_force_field,
-                epoch_dir=Path("vaporization") if USE_LOCAL_FILES else tmp_path,
+            dataset=dataset,
+            tensor_force_field=tensor_force_field,
+            epoch_dir=Path("vaporization") if USE_LOCAL_FILES else tmp_path,
         )
 
         assert not torch.isnan(torch.stack([y_ref, y_ref_std, y_pred, y_pred_std])).any()
