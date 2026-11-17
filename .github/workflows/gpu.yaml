@@ -4,6 +4,8 @@ on:
   pull_request:
     types:
       - ready_for_review
+      - reopened
+      - synchronize
     branches:
       - "main"
     paths:
@@ -27,6 +29,7 @@ env:
 jobs:
   start-aws-runner:
     runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
     permissions:
       id-token: write
       contents: read
@@ -51,6 +54,7 @@ jobs:
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
   self-hosted-test:
+    timeout-minutes: 30
     name: GPU-based tests (env ${{ matrix.environment }})
     runs-on: self-hosted
     strategy:
@@ -65,6 +69,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Schedule auto-shutdown after 24 hours
+        # This is the failsafe if timeout-minutes above fails
+        # More info https://github.com/openforcefield/openff-evaluator/issues/740
+        run: nohup bash -c 'sleep 86400 && sudo shutdown -h now' > /tmp/auto-shutdown.log 2>&1 &
+
       - name: Set up virtual environment
         uses: prefix-dev/setup-pixi@v0.11.3
         with:
@@ -72,7 +81,6 @@ jobs:
           frozen: true
 
       - name: License OpenEye Toolkits
-        if: ${{ contains(matrix.environment, 'openeye') }}
         run: |
           echo "${SECRET_OE_LICENSE}" > ${OE_LICENSE}
           pixi run -e ${{ matrix.environment }} python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
@@ -81,9 +89,9 @@ jobs:
 
       - name: Run debugging commands
         run: |
-            pixi run -e gpu python -m openmm.testInstallation
-            pixi run -e gpu python -c "import openmm; print(openmm.Platform.getPluginLoadFailures())"
-            pixi run -e gpu python -c "import openmm; openmm.Platform.getPlatformByName('CUDA')"
+            pixi run -e ${{ matrix.environment }} python -m openmm.testInstallation
+            pixi run -e ${{ matrix.environment }} python -c "import openmm; print(openmm.Platform.getPluginLoadFailures())"
+            pixi run -e ${{ matrix.environment }} python -c "import openmm; openmm.Platform.getPlatformByName('CUDA')"
             nvidia-smi
 
       - name: Run GPU-based tests
