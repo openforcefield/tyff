@@ -1,3 +1,4 @@
+import socket
 import tarfile
 from json import dump
 from pathlib import Path
@@ -7,6 +8,7 @@ from openff.toolkit import ForceField
 from torch import no_grad
 from torch.optim import Adam
 
+from tyff.compute.configs import local_config, hpc3_config
 from tyff._serialization import dump_tensor_force_field
 from tyff.compute._logging import _set_up_logger
 from tyff.converters import convert_tensor_force_field, topologies_for
@@ -91,7 +93,13 @@ def main(root: Path) -> None:
         # this is linked under the hood to theta - needed to gradients together
         current_ff = trainable.to_force_field(theta)  # 287
 
+        if "hpc3" in socket.gethostname():
+            parsl_config = hpc3_config(partition="gpu", account="dmobley_lab_gpu")
+        else:
+            parsl_config = local_config(max_workers=6),
+
         simulate(
+            parsl_config=parsl_config,
             force_field=current_ff,
             epoch_dir=root / f"EPOCH_{epoch}",
             thermo_data=thermo_data,
