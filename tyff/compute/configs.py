@@ -44,7 +44,7 @@ def hpc3_config(
         executors=[
             HighThroughputExecutor(
                 label="gpu_htex",
-                max_workers_per_node=1, # one **worker** per block
+                max_workers_per_node=1,  # one **worker** per block
                 # HPC3 has mostly 4 GPUs/node
                 available_accelerators=4,
                 cpu_affinity="block",

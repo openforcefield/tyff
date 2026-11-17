@@ -8,7 +8,6 @@ from openff.toolkit import ForceField
 import tyff
 import tyff.converters
 import tyff.train
-from tyff.compute.configs import local_config, hpc3_config
 from tyff.compute.workflow import SimulationWorkflow
 from tyff.converters.openff._tensors import convert_tensor_force_field
 from tyff.mm._ops import RemoteEnsembleAverage
