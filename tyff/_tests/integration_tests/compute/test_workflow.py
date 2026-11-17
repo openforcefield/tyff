@@ -114,7 +114,7 @@ class TestEnthalpyOfMixing:
         assert -1 < y_pred < 0, f"{y_pred=} {y_ref=}, {y_pred_std=}, {y_ref_std=}"
 
 
-class TestEnthalpyOfVaporization:
+class TestDensity:
     def test_nonstandard_pressure(self, tmp_path):
 
         dataset = create_dataset(
