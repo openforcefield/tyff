@@ -28,8 +28,9 @@ env:
 
 jobs:
   start-aws-runner:
-    runs-on: ubuntu-latest
+    name: Start AWS runner
     if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: read
@@ -54,9 +55,10 @@ jobs:
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
   self-hosted-test:
-    timeout-minutes: 30
     name: GPU-based tests (env ${{ matrix.environment }})
+    if: github.event.pull_request.draft == false
     runs-on: self-hosted
+    timeout-minutes: 30
     strategy:
         fail-fast: true
         matrix:
@@ -99,6 +101,8 @@ jobs:
             pixi run -e gpu run_gpu_tests
 
   stop-aws-runner:
+    name: Stop AWS runner
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     permissions:
         id-token: write
