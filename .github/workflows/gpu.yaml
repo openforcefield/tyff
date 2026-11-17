@@ -2,8 +2,14 @@ name: GPU-enabled CI
 on:
   workflow_dispatch:
   pull_request:
+    types:
+      - ready_for_review
     branches:
       - "main"
+    paths:
+      - "tyff/**"
+      - "pixi.toml"
+      - ".github/workflows/gpu.yaml"
 
 concurrency:
   # Specific group naming so CI is only cancelled
@@ -64,6 +70,14 @@ jobs:
         with:
           environments: ${{ matrix.environment }}
           frozen: true
+
+      - name: License OpenEye Toolkits
+        if: ${{ contains(matrix.environment, 'openeye') }}
+        run: |
+          echo "${SECRET_OE_LICENSE}" > ${OE_LICENSE}
+          pixi run -e ${{ matrix.environment }} python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
+        env:
+          SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
       - name: Run debugging commands
         run: |
