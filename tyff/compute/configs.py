@@ -54,7 +54,7 @@ def hpc3_config(
                 provider=SlurmProvider(
                     partition=partition,
                     account=account,
-                    scheduler_options="#SBATCH --gres=gpu:1",
+                    scheduler_options="#SBATCH --gres=gpu:A30:1",
                     exclusive=False,  # do not request entire node per job
                     cmd_timeout=120,  # time to wait for SLURM commands to finish, default is 10 seconds
                     nodes_per_block=1,
