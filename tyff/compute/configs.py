@@ -39,7 +39,17 @@ def hpc3_config(
     account: str = "dmobley_omsf_gpu32",
     max_blocks=100,
 ):
-    """For production HPC runs."""
+    """
+    For use on HPC3 (CUI) only
+
+    Some brittle details include
+      - The `hpc3` Pixi environment is used
+      - A30 GPUs are forced
+      - Number of concurrent jobs is capped at 20 (flexible)
+      - Walltime is capped at 20 minutes (flexible)
+    """
+    worker_init = 'eval "$(pixi shell-hook -e hpc3)"'
+
     return Config(
         executors=[
             HighThroughputExecutor(
@@ -52,13 +62,14 @@ def hpc3_config(
                 provider=SlurmProvider(
                     partition=partition,
                     account=account,
-                    scheduler_options="#SBATCH --gres=gpu:1",
+                    scheduler_options="#SBATCH --gres=gpu:A30:1",
                     exclusive=False,  # do not request entire node per job
                     cmd_timeout=120,  # time to wait for SLURM commands to finish, default is 10 seconds
                     nodes_per_block=1,
                     init_blocks=1,
                     max_blocks=max_blocks,
                     walltime="00:20:00",
+                    worker_init=worker_init,
                 ),
             )
         ],
