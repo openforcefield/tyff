@@ -40,6 +40,8 @@ def hpc3_config(
     max_blocks=100,
 ):
     """For production HPC runs."""
+    worker_init = f'eval "$(pixi shell-hook -e hpc3)"'
+
     return Config(
         executors=[
             HighThroughputExecutor(
@@ -59,6 +61,7 @@ def hpc3_config(
                     init_blocks=1,
                     max_blocks=4,
                     walltime="00:20:00",
+                    worker_init=worker_init,
                 ),
             )
         ],
