@@ -59,7 +59,7 @@ def hpc3_config(
                     cmd_timeout=120,  # time to wait for SLURM commands to finish, default is 10 seconds
                     nodes_per_block=1,
                     init_blocks=1,
-                    max_blocks=4,
+                    max_blocks=20,
                     walltime="00:20:00",
                     worker_init=worker_init,
                 ),
