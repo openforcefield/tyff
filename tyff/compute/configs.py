@@ -45,8 +45,8 @@ def hpc3_config(
             HighThroughputExecutor(
                 label="gpu_htex",
                 max_workers_per_node=1,  # one **worker** per block
-                # HPC3 has mostly 4 GPUs/node
-                available_accelerators=4,
+                # HPC3 has >1 GPUs/node, but with `exclusive=False` we never request entire nodes at once
+                available_accelerators=1,
                 cpu_affinity="block",
                 worker_debug=True,
                 provider=SlurmProvider(
@@ -57,7 +57,7 @@ def hpc3_config(
                     cmd_timeout=120,  # time to wait for SLURM commands to finish, default is 10 seconds
                     nodes_per_block=1,
                     init_blocks=1,
-                    max_blocks=4,
+                    max_blocks=max_blocks,
                     walltime="00:20:00",
                 ),
             )
