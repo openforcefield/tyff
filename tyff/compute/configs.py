@@ -40,7 +40,7 @@ def hpc3_config(
     max_blocks=100,
 ):
     """
-    For use on HPC3 (CUI) only
+    For use on HPC3 (UCI) only
 
     Some brittle details include
       - The `hpc3` Pixi environment is used
