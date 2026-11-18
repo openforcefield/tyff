@@ -40,13 +40,13 @@ def hpc3_config(
     max_blocks=100,
 ):
     """For production HPC runs."""
-    worker_init = f'eval "$(pixi shell-hook -e hpc3)"'
+    worker_init = 'eval "$(pixi shell-hook -e hpc3)"'
 
     return Config(
         executors=[
             HighThroughputExecutor(
                 label="gpu_htex",
-                max_workers_per_node=1, # one **worker** per block
+                max_workers_per_node=1,  # one **worker** per block
                 # HPC3 has mostly 4 GPUs/node
                 available_accelerators=4,
                 cpu_affinity="block",
