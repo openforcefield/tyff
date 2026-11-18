@@ -39,7 +39,15 @@ def hpc3_config(
     account: str = "dmobley_omsf_gpu32",
     max_blocks=100,
 ):
-    """For production HPC runs."""
+    """
+    For use on HPC3 (CUI) only
+
+    Some brittle details include
+      - The `hpc3` Pixi environment is used
+      - A30 GPUs are forced
+      - Number of concurrent jobs is capped at 20 (flexible)
+      - Walltime is capped at 20 minutes (flexible)
+    """
     worker_init = 'eval "$(pixi shell-hook -e hpc3)"'
 
     return Config(
