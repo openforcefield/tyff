@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import json
 from pathlib import Path
 
+import parsl
 import torch
 from datasets import Dataset
 from openff.toolkit import ForceField
@@ -9,7 +12,6 @@ from openff.units import unit
 import tyff
 import tyff.converters
 import tyff.train
-from tyff.compute.configs import local_config
 from tyff.compute.workflow import SimulationWorkflow
 from tyff.converters.openff._tensors import convert_tensor_force_field
 from tyff.mm._ops import RemoteEnsembleAverage
@@ -19,7 +21,9 @@ KCAL_TO_KJ = 4.184
 
 
 def simulate(
+    parsl_config: parsl.Config,
     tensor_force_field: tyff.TensorForceField,
+    force_field: tyff.TensorForceField,
     epoch_dir: Path,
     thermo_data: Dataset,
     smirnoff_force_field: str,
@@ -35,6 +39,8 @@ def simulate(
     ----------
     tensor_force_field : tyff.TensorForceField
         The (tensor) force field to be used in the simulation.
+    parsl_config : parsl.Config
+        The Parsl configuration to be used to manage these simulations.
     epoch_dir : Path
         The directory for this epoch where simulation results will be stored.
     thermo_data : Dataset
@@ -64,7 +70,7 @@ def simulate(
 
     with SimulationWorkflow(
         base_dir=str(epoch_dir / "simulations"),
-        parsl_config=local_config(max_workers=6),
+        parsl_config=parsl_config,  # possibly bad to _take in_ an initialized config vs. instantiate it here?
     ) as workflow:
         workflow.submit_dataset(
             dataset=thermo_data,
