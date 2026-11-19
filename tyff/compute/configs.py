@@ -37,7 +37,7 @@ def local_config(max_workers: int = 10):
 def hpc3_config(
     partition: str = "free-gpu",
     account: str = "dmobley_omsf_gpu32",
-    max_blocks=100,
+    max_blocks: int = 100,
 ):
     """
     For use on HPC3 (CUI) only
@@ -45,7 +45,6 @@ def hpc3_config(
     Some brittle details include
       - The `hpc3` Pixi environment is used
       - A30 GPUs are forced
-      - Number of concurrent jobs is capped at 20 (flexible)
       - Walltime is capped at 20 minutes (flexible)
     """
     worker_init = 'eval "$(pixi shell-hook -e hpc3)"'
