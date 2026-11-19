@@ -44,7 +44,7 @@ jobs:
           aws-region: us-east-1
       - name: Create cloud runner
         id: aws-start
-        uses: omsf/start-aws-gha-runner@v1.3.0
+        uses: omsf/start-aws-gha-runner@v1.4.0
         with:
           aws_image_id: ami-0d5079d9be06933e5
           aws_instance_type: g4dn.xlarge
@@ -56,6 +56,8 @@ jobs:
           GH_PAT: ${{ secrets.GH_PAT }}
   self-hosted-test:
     name: GPU-based tests (env ${{ matrix.environment }})
+    # maybe switch to if: needs.start-aws-runner.result ==  'success'
+    # if the condition on start-aws-runner changes
     if: github.event.pull_request.draft == false
     runs-on: self-hosted
     timeout-minutes: 30
@@ -102,7 +104,7 @@ jobs:
 
   stop-aws-runner:
     name: Stop AWS runner
-    if: github.event.pull_request.draft == false
+    if: always() && github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     permissions:
         id-token: write
@@ -110,7 +112,6 @@ jobs:
     needs:
       - start-aws-runner
       - self-hosted-test
-    if: ${{ always() }}
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
