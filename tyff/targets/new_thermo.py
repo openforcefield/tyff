@@ -319,7 +319,7 @@ def compute_properties(
                 R = (1 * unit.avogadro_number * unit.boltzmann_constant).m_as("kJ/K")
 
                 print(
-                    f"Enthalpy of vaporization calculation: {gas_energy=}, {liquid_energy=}, "
+                    f"Enthalpy of vaporization calculation (job id={gas_job_id}): {gas_energy=}, {liquid_energy=}, "
                     f"{n_molecules=}, {R=}, {gas_config['temperature']=}"
                 )
 

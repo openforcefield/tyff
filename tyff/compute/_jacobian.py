@@ -109,11 +109,16 @@ def _get_ensemble_average_and_jacobian(
     # also hope ordering lines up
     n_copies = [int(n_molecules * x) for x in compute_config["x"]]
 
+    is_periodic = compute_config["tag"] == "liquid"
+
+    assert is_periodic == (compute_config["n_molecules"] > 1)
+
     # this is on the scale of just this job
     system = tyff.TensorSystem(
         topologies=tensor_topologies,
         n_copies=n_copies,
-        is_periodic=True,  # need to handle the case of gas simulations
+        # is_periodic=compute_config['n_molecules'] > 1,  # need to handle the case of gas simulations
+        is_periodic=False,
     )
 
     frames_path = pathlib.Path(f"{job_dir}/production_trajectory.msgpack")

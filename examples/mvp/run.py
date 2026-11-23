@@ -17,7 +17,7 @@ from tyff.targets.new_thermo import predict, simulate
 from tyff.train import ParameterConfig, Trainable
 
 N_EPOCHS = 10
-N_REPLICATES = 1
+N_REPLICATES = 3
 N_MOLECULES = 480
 INITIAL_FORCE_FIELD = "openff-2.3.0.offxml"
 
@@ -26,7 +26,9 @@ INITIAL_FORCE_FIELD = "openff-2.3.0.offxml"
 COEFFICIENTS = {
     "energy": 0.1,
     "force": 0.01,
-    "thermo": 100_000.0,
+    "density": 1_000.0,
+    "enthalpy_of_mixing": 1.0,
+    "enthalpy_of_vaporization": 1.0,
 }
 
 
@@ -93,7 +95,7 @@ def main(root: Path) -> None:
         if "hpc3" in socket.gethostname():
             parsl_config = hpc3_config(partition="gpu", account="dmobley_lab_gpu")
         else:
-            parsl_config = local_config(max_workers=6)
+            parsl_config = local_config(max_workers=8)
 
         simulate(
             tensor_force_field=current_ff,
@@ -105,11 +107,23 @@ def main(root: Path) -> None:
             n_molecules=N_MOLECULES,
         )
 
-        y_ref, _y_ref_std, y_pred, _y_pred_std = predict(
-            dataset=thermo_data,
-            tensor_force_field=current_ff,
-            epoch_dir=root / f"EPOCH_{epoch}",
-        )
+        thermo_results = dict()
+
+        for tag in {*thermo_data["tag"]}:
+            thermo_subset = thermo_data.filter(lambda x: x["tag"] == tag)
+
+            y_ref, y_ref_std, y_pred, y_pred_std = predict(
+                dataset=thermo_subset,
+                tensor_force_field=current_ff,
+                epoch_dir=root / f"EPOCH_{epoch}",
+            )
+
+            thermo_results[tag] = {
+                "y_ref": y_ref,
+                "y_ref_std": y_ref_std,
+                "y_pred": y_pred,
+                "y_pred_std": y_pred_std,
+            }
 
         energy_ref, energy_pred, forces_ref, forces_pred = energy.predict(
             energy_data,
@@ -118,19 +132,30 @@ def main(root: Path) -> None:
             normalize=False,
         )
 
-        # can construct loss function in many different ways, including modifying coefficients
-        loss = (
-            COEFFICIENTS["energy"] * (energy_pred - energy_ref).square().mean()
-            + COEFFICIENTS["force"] * (forces_pred - forces_ref).square().mean()
-            + COEFFICIENTS["thermo"] * (y_pred - y_ref).square().mean()
+        print(f"EPOCH {epoch}:")
+
+        energy_loss = COEFFICIENTS["energy"] * (energy_pred - energy_ref).square().mean()
+        force_loss = COEFFICIENTS["force"] * (forces_pred - forces_ref).square().mean()
+
+        print(
+            f"\tenergy component (coefficient {COEFFICIENTS['energy']}) has loss contribution {energy_loss.item():.6f}"
         )
 
+        print(f"\tforce component (coefficient {COEFFICIENTS['force']}) has loss contribution {force_loss.item():.6f}")
+
+        loss = energy_loss + force_loss
+
+        for tag, results in thermo_results.items():
+            this_loss = COEFFICIENTS[tag] * (results["y_pred"] - results["y_ref"]).square().mean()
+            print(
+                f"\tthermo component {tag=} (coefficient {COEFFICIENTS[tag]}) "
+                f"has loss contribution {this_loss.item()=}"
+            )
+            loss += this_loss
+
         logger.info(f"EPOCH {epoch}: loss={loss.item():.6f}")
-        print(f"EPOCH {epoch}: loss={loss.item():.6f}")
-        print(f"\tloss component energy (after applying {COEFFICIENTS=})")
-        print(f"\tenergy {COEFFICIENTS['energy'] * (energy_pred - energy_ref).square().mean()}")
-        print(f"\tforce {COEFFICIENTS['force'] * (forces_pred - forces_ref).square().mean()}")
-        print(f"\tthermo {COEFFICIENTS['thermo'] * (y_pred - y_ref).square().mean()}")
+
+        print(f"EPOCH {epoch}: total loss={loss.item():.6f}")
 
         optimizer.zero_grad()
 
