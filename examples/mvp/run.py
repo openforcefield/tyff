@@ -7,13 +7,13 @@ from datasets import Dataset
 from openff.toolkit import ForceField
 from torch import no_grad
 from torch.optim import Adam
+from tyff.targets.new_thermo import predict, simulate
 
 from tyff._serialization import dump_tensor_force_field
 from tyff.compute._logging import _set_up_logger
 from tyff.compute.configs import hpc3_config, local_config
 from tyff.converters import convert_tensor_force_field, topologies_for
 from tyff.targets import energy, thermo
-from tyff.targets.new_thermo import predict, simulate
 from tyff.train import ParameterConfig, Trainable
 
 N_EPOCHS = 10
