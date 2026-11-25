@@ -7,14 +7,15 @@ import json
 import logging
 import pathlib
 import typing
+from pathlib import Path
 
 import datasets
 import datasets.table
-import numpy
-import openmm.unit
+import parsl
 import pyarrow
-import pydantic
 import torch
+from datasets import Dataset
+from openff.toolkit import ForceField
 from openff.units import unit
 
 import tyff
@@ -24,6 +25,8 @@ import tyff.optim
 import tyff.utils
 import tyff.utils.dataset
 import tyff.utils.loss
+from tyff.converters.openff._tensors import convert_tensor_force_field
+from tyff.mm._ops import RemoteEnsembleAverage
 
 KCAL_TO_KJ = 4.184
 
@@ -52,13 +55,6 @@ DATA_SCHEMA = pyarrow.schema(
         ("source", pyarrow.string()),
     ]
 )
-
-_REQUIRES_BULK_SIM = {"density": True, "hvap": True, "hmix": True}
-"""Whether a bulk simulation is required for each data type."""
-_REQUIRES_PURE_SIM = {"density": False, "hvap": False, "hmix": True}
-"""Whether a simulation of each component is required for each data type."""
-_REQUIRES_VACUUM_SIM = {"density": False, "hvap": True, "hmix": False}
-"""Whether a vacuum simulation is required for each data type."""
 
 Phase = typing.Literal["bulk", "vacuum"]
 PHASES = typing.get_args(Phase)
@@ -96,42 +92,6 @@ class DataEntry(typing.TypedDict):
     """The source of the data point."""
 
 
-class SimulationKey(typing.NamedTuple):
-    """A key used to identify a simulation."""
-
-    smiles: tuple[str, ...]
-    """The SMILES definitions of the components present in the system."""
-    counts: tuple[int, ...]
-    """The number of copies of each component present in the system."""
-
-    temperature: float
-    """The temperature [K] at which the simulation was run."""
-    pressure: float | None
-    """The pressure [kPa] at which the simulation was run."""
-
-
-class SimulationConfig(pydantic.BaseModel):
-    """Configuration for a simulation to run."""
-
-    max_mols: int = pydantic.Field(..., description="The maximum number of molecules to simulate.")
-    gen_coords: tyff.mm.GenerateCoordsConfig = pydantic.Field(
-        ..., description="Configuration for generating initial coordinates."
-    )
-
-    apply_hmr: bool = pydantic.Field(False, description="Whether to apply hydrogen mass repartitioning.")
-
-    equilibrate: list[tyff.mm.MinimizationConfig | tyff.mm.SimulationConfig] = pydantic.Field(
-        ..., description="Configuration for equilibration simulations."
-    )
-
-    production: tyff.mm.SimulationConfig = pydantic.Field(
-        ..., description="Configuration for the production simulation."
-    )
-    production_frequency: int = pydantic.Field(
-        ..., description="The frequency at which to write frames during production."
-    )
-
-
 class _Observables(typing.NamedTuple):
     """Ensemble averages of the observables computed from a simulation."""
 
@@ -139,9 +99,6 @@ class _Observables(typing.NamedTuple):
     """The mean value of each observable with ``shape=()``."""
     std: dict[str, torch.Tensor]
     """The standard deviation of each observable with ``shape=()``."""
-
-
-_SystemDict = dict[SimulationKey, tyff.TensorSystem]
 
 
 def create_dataset(*entries: DataEntry) -> datasets.Dataset:
@@ -231,60 +188,6 @@ def create_from_evaluator(dataset_file: pathlib.Path) -> datasets.Dataset:
     return create_dataset(*properties)
 
 
-def default_closure(
-    trainable: tyff.train.Trainable,
-    topologies: dict[str, tyff.TensorTopology],
-    dataset: datasets.Dataset,
-    per_type_scales: dict[DataType, float] | None = None,
-    verbose: bool = False,
-    simulation_config: dict[str, SimulationConfig] | None = None,
-) -> tyff.optim.ClosureFn:
-    """Return a default closure function for training against thermodynamic
-    properties.
-
-    Args:
-        trainable: The wrapper around trainable parameters.
-        topologies: The topologies of the molecules present in the dataset, with keys
-            of mapped SMILES patterns.
-        dataset: The dataset to train against.
-        per_type_scales: The scale factor to apply to each data type.
-        verbose: Whether to log additional information about predictions.
-        simulation_config: The (optional) simulation configuration, should contain
-            a config for each phase if not provided the default will be used.
-
-    Returns:
-        The default closure function.
-    """
-
-    def closure_fn(
-        x: torch.Tensor,
-        compute_gradient: bool,
-        compute_hessian: bool,
-    ):
-        force_field = trainable.to_force_field(x)
-
-        y_ref, _, y_pred, _ = tyff.targets.thermo.predict(  # type: ignore[attr-defined]
-            dataset,
-            force_field,
-            topologies,
-            pathlib.Path.cwd(),
-            None,
-            per_type_scales,
-            verbose,
-            simulation_config,
-        )
-        loss, gradient, hessian = ((y_pred - y_ref) ** 2).sum(), None, None
-
-        if compute_hessian:
-            hessian = tyff.utils.loss.approximate_hessian(x, y_pred)
-        if compute_gradient:
-            gradient = torch.autograd.grad(loss, x, retain_graph=True)[0].detach()
-
-        return loss.detach(), gradient, hessian
-
-    return closure_fn
-
-
 def extract_smiles(dataset: datasets.Dataset) -> list[str]:
     """Return a list of unique SMILES strings in the dataset.
 
@@ -298,245 +201,357 @@ def extract_smiles(dataset: datasets.Dataset) -> list[str]:
     return sorted(set([val for row in dataset["smiles"] for val in row]))
 
 
-def _convert_entry_to_system(
-    entry: DataEntry, topologies: dict[str, tyff.TensorTopology], max_mols: int
-) -> tuple[SimulationKey, tyff.TensorSystem]:
-    """Convert a data entry into a system ready to simulate.
-
-    Args:
-        entry: The data entry to convert.
-        topologies: The topologies of the molecules present in the dataset, with keys
-            of mapped SMILES patterns.
-        max_mols: The maximum number of molecules to simulate.
-
-    Returns:
-        The system and its associated key.
+def simulate(
+    parsl_config: parsl.Config,
+    tensor_force_field: tyff.TensorForceField,
+    epoch_dir: Path,
+    thermo_data: Dataset,
+    smirnoff_force_field: str,
+    n_molecules: int,
+    n_replicates: int,
+) -> None:
     """
-    if len(entry["smiles"]) > 2 or len(entry["x"]) > 2:
-        raise NotImplementedError("Only pure and binary mixtures are currently supported.")
+    Simulate the given force field using the provided thermo data.
 
-    smiles_a: str = entry["smiles"][0]
+    This is meant to be used inside of a training loop.
 
-    fraction_a = entry["x"][0]
-    fraction_b = entry["x"][1] if len(entry["x"]) > 1 else 0.0
+    Parameters
+    ----------
+    tensor_force_field : tyff.TensorForceField
+        The (tensor) force field to be used in the simulation.
+    parsl_config : parsl.Config
+        The Parsl configuration to be used to manage these simulations.
+    epoch_dir : Path
+        The directory for this epoch where simulation results will be stored.
+    thermo_data : Dataset
+        The dataset containing thermodynamic data for the simulation.
+    smirnoff_force_field : str
+        The path to the original (SMIRNOFF) force field corresponding to the tensor force field.
+    n_molecules : int
+        The number of molecules to simulate.
+    n_replicates : int
+        The number of replicates for each simulation.
 
-    assert numpy.isclose(fraction_a + fraction_b, 1.0), "Mole fractions do not sum to 1.0"
-
-    n_copies_a = int(max_mols * fraction_a)
-    n_copies_b = int(max_mols * fraction_b)
-
-    smiles = [smiles_a]
-
-    system_topologies: list[tyff.TensorTopology] = [topologies[smiles_a]]
-    n_copies = [n_copies_a]
-
-    if n_copies_b > 0:
-        smiles_b: str = entry["smiles"][1]
-        smiles.append(smiles_b)
-
-        system_topologies.append(topologies[smiles_b])
-        n_copies.append(n_copies_b)
-
-    key = SimulationKey(tuple(smiles), tuple(n_copies), entry["temperature"], entry["pressure"])
-    system = tyff.TensorSystem(system_topologies, n_copies, True)
-
-    return key, system
-
-
-def _bulk_config(temperature: float, pressure: float) -> SimulationConfig:
-    """Return a default simulation configuration for simulations of the bulk phase.
-
-    Args:
-        temperature: The temperature [K] at which to run the simulation.
-        pressure: The pressure [kPa] at which to run the simulation.
-
-    Returns:
-        The default simulation configuration.
+    Returns
+    -------
+    None
     """
-    temperature = temperature * openmm.unit.kelvin
-    pressure = pressure * openmm.unit.kilopascal
+    from tyff.compute.workflow import SimulationWorkflow
 
-    return SimulationConfig(
-        max_mols=256,
-        gen_coords=tyff.mm.GenerateCoordsConfig(),
-        equilibrate=[
-            tyff.mm.MinimizationConfig(),
-            # short NVT equilibration simulation
-            tyff.mm.SimulationConfig(
-                temperature=temperature,
-                pressure=None,
-                n_steps=50000,
-                timestep=1.0 * openmm.unit.femtosecond,
-            ),
-            # short NPT equilibration simulation
-            tyff.mm.SimulationConfig(
-                temperature=temperature,
-                pressure=pressure,
-                n_steps=50000,
-                timestep=1.0 * openmm.unit.femtosecond,
-            ),
-        ],
-        production=tyff.mm.SimulationConfig(
-            temperature=temperature,
-            pressure=pressure,
-            n_steps=500000,
-            timestep=2.0 * openmm.unit.femtosecond,
-        ),
-        production_frequency=1000,
+    # write out this epoch's (tensor) force field as a SMIRNOFF force field
+    current_smirnoff_force_field = convert_tensor_force_field(
+        original_force_field=ForceField(smirnoff_force_field),
+        tensor_force_field=tensor_force_field,
     )
 
+    epoch_dir.mkdir(exist_ok=True)
 
-def _vacuum_config(temperature: float, pressure: float | None) -> SimulationConfig:
-    """Return a default simulation configuration for simulations of the vacuum phase.
+    smirnoff_force_field_file = str(epoch_dir / "current_force_field.offxml")
+    current_smirnoff_force_field.to_file(filename=smirnoff_force_field_file)
 
-    Args:
-        temperature: The temperature [K] at which to run the simulation.
-        pressure: The pressure [kPa] at which to run the simulation.
+    with SimulationWorkflow(
+        base_dir=str(epoch_dir / "simulations"),
+        parsl_config=parsl_config,  # possibly bad to _take in_ an initialized config vs. instantiate it here?
+    ) as workflow:
+        workflow.submit_dataset(
+            dataset=thermo_data,
+            tensor_force_field=tensor_force_field,
+            force_field=smirnoff_force_field_file,  # possibly smoother to pass through openff.toolkit.ForceField
+            n_molecules=n_molecules,
+            n_replicates=n_replicates,
+        )
 
-    Returns:
-        The default simulation configuration.
+        workflow.wait()
+
+    # here may be a place to free up memory, i.e. `del workflow` or something more involved with Parsl
+    # but this probably should be handled automatically by SimulationWorkflow?
+
+
+def load_remote_observables(
+    force_field_per_epoch: tyff.TensorForceField,
+    base_dir: Path,
+    job_ids: list[str],
+) -> dict[str, dict[str, torch.Tensor]]:
     """
-    temperature = temperature * openmm.unit.kelvin
-    assert pressure is None
+    Load observables and attach to graph.
 
-    return SimulationConfig(
-        max_mols=1,
-        gen_coords=tyff.mm.GenerateCoordsConfig(),
-        equilibrate=[
-            tyff.mm.MinimizationConfig(),
-            tyff.mm.SimulationConfig(
-                temperature=temperature,
-                pressure=None,
-                n_steps=50000,
-                timestep=1.0 * openmm.unit.femtosecond,
-            ),
-        ],
-        production=tyff.mm.SimulationConfig(
-            temperature=temperature,
-            pressure=None,
-            n_steps=1000000,
-            timestep=1.0 * openmm.unit.femtosecond,
-        ),
-        production_frequency=500,
+    Returns a mapping between job IDs and associated observables.
+
+    Parameters
+    ----------
+    force_field_per_epoch : tyff.TensorForceField
+        The tensor force field used for the simulations.
+    base_dir : Path
+        The base directory where simulation results are stored.
+    job_ids : list[str]
+        A 1-D list of job IDs corresponding to the simulations.
+    """
+    from tyff.mm._ops import _pack_force_field
+
+    tensors, *_ = _pack_force_field(
+        force_field_per_epoch
+    )  # force_field_per_epoch should also be the global reference FF passed to the workers
+    parameters: torch.Tensor = torch.cat(
+        [t.reshape(-1) for t in tensors if t is not None]
+    )  # has to be flat, and not a tuple
+
+    job_id_to_observables = {}
+
+    for job_id in job_ids:
+        job_dir = base_dir / "simulations" / job_id
+
+        assert job_dir.exists()
+
+        with open(job_dir / "ensemble_averages.json") as f:
+            means_dict: dict[str, float] = json.load(f)  # actually str, torch.float64
+
+        jacobians: torch.Tensor = torch.load(job_dir / "jacobian.pt")
+
+        names = list(
+            means_dict
+        )  # get the names of the computed properties in the means_dict so we can convert dict -> tensor -> dict again
+        tensor_means = parameters.new_tensor([means_dict[x] for x in names])
+        attached_means = RemoteEnsembleAverage.apply(
+            tensor_means,
+            jacobians.to("cpu"),  # to(device) ?, get from somewhere?
+            parameters,
+        )
+
+        job_id_to_observables[job_id] = dict(zip(names, attached_means))
+
+    return job_id_to_observables
+
+
+def compute_properties(
+    dataset: Dataset,
+    observables: dict[str, dict[str, torch.Tensor]],
+    epoch_dir: Path,
+) -> list[tuple[dict[str, str | torch.Tensor], dict[str, str | torch.Tensor]]]:
+
+    # TODO: Make this list[tuple[dict[str, torch.Tensor], dict[str, torch.Tensor]]] = list()
+    means_and_stds: list[tuple[dict[str, str | torch.Tensor], dict[str, str | torch.Tensor]]] = list()
+
+    # think about better standardizing some of these paths
+    with open(epoch_dir / "simulations" / "target_job_map.json") as f:
+        target_compute_mapping = {tuple(k): v for k, v in json.load(f)}
+
+    # TODO: Wrap this all up into SimulationWorkflow.estimate_dataset
+    for entry in dataset:  # type: ignore
+        entry: DataEntry
+        if entry["tag"] == "density":
+            # this lookup can be improved, but INITIAL_FORCE_FIELD
+            # gets mutated by this point so it's not so straightforward
+            for (target_id, *_), job_ids in target_compute_mapping.items():
+                if target_id == entry["id"]:
+                    break
+
+            # probably don't need to carry the tag, maybe just return the value?
+            mean: dict[str, str | torch.Tensor] = {
+                "tag": entry["tag"],
+                "value": torch.stack([observables[job_id[0]]["density"] for job_id in job_ids]).mean(),
+            }
+            std: dict[str, str | torch.Tensor] = {
+                "tag": entry["tag"],
+                "std": torch.stack([observables[job_id[0]]["density"] for job_id in job_ids]).std(),
+            }
+
+        elif entry["tag"] == "dielectric_constant":
+            raise NotImplementedError()
+            # likely identical to density case
+        elif entry["tag"] == "enthalpy_of_mixing":
+            for (target_id, *_), job_ids in target_compute_mapping.items():
+                if target_id == entry["id"]:
+                    break
+
+            values = list()
+
+            for job_ids_in_this_replicate in job_ids:
+                assert len(job_ids_in_this_replicate) >= 3, (
+                    "Enthalpy of vaporization requires three or more jobs (pure and each component)"
+                )
+                with (
+                    open(
+                        epoch_dir / "simulations" / job_ids_in_this_replicate[0] / "compute_config.json",
+                    ) as f0,
+                    open(
+                        epoch_dir / "simulations" / job_ids_in_this_replicate[1] / "compute_config.json",
+                    ) as f1,
+                    open(
+                        epoch_dir / "simulations" / job_ids_in_this_replicate[2] / "compute_config.json",
+                    ) as f2,
+                ):
+                    compute_configs = [
+                        json.load(f0),
+                        json.load(f1),
+                        json.load(f2),
+                    ]
+
+                    mixture_config = next(d for d in compute_configs if len(d["smiles"]) == 2)
+
+                    mixture_job_id = job_ids_in_this_replicate[compute_configs.index(mixture_config)]
+
+                    # try to keep this flexible to ternary+ mixtures
+                    components = mixture_config["smiles"]
+                    x = mixture_config["x"]
+
+                    pure_configs = [
+                        next(d for d in compute_configs if d["smiles"] == [component_i]) for component_i in components
+                    ]
+
+                    component_job_ids = list()
+                    for component_i in components:
+                        component_job_id = next(
+                            job_ids_in_this_replicate[compute_configs.index(d)]
+                            for d in compute_configs
+                            if d["smiles"] == [component_i]
+                        )
+                        component_job_ids.append(component_job_id)
+
+                    # the provided job IDs should be represented by these variables, add several checks to make sure
+                    # parsing+bookkeepping is all lined up
+                    assert sorted([*component_job_ids, mixture_job_id]) == sorted(job_ids_in_this_replicate)
+
+                    assert len(component_job_ids) == len(pure_configs) == len(mixture_config["smiles"])
+
+                    for component_config in pure_configs:
+                        assert len(component_config["smiles"]) == len(component_config["x"]) == 1
+                        assert component_config["smiles"][0] in mixture_config["smiles"]
+
+                    mixture_energy = observables[mixture_job_id]["potential_energy"]
+
+                    component_energies = [
+                        observables[component_job_id]["potential_energy"] for component_job_id in component_job_ids
+                    ]
+                    component_n_molecules = [config["n_molecules"] for config in pure_configs]
+
+                    # this is kcal/mol because of what observables is computed as in tyff/mm/_ops.py
+                    dhmix = mixture_energy / mixture_config["n_molecules"] - sum(
+                        x_i * component_energy_i / n_i
+                        for x_i, component_energy_i, n_i in zip(x, component_energies, component_n_molecules)
+                    )
+
+                    values.append(dhmix * KCAL_TO_KJ)  # convert to kJ/mol
+
+            mean: dict[str, str | torch.Tensor] = {"tag": entry["tag"], "value": torch.stack(values).mean()}
+            std: dict[str, str | torch.Tensor] = {"tag": entry["tag"], "std": torch.stack(values).std()}
+
+        elif entry["tag"] == "excess_molar_volume":
+            raise NotImplementedError()
+        elif entry["tag"] == "enthalpy_of_vaporization":
+            for (target_id, *_), job_ids in target_compute_mapping.items():
+                if target_id == entry["id"]:
+                    break
+
+            values = list()
+
+            for job_ids_in_this_replicate in job_ids:
+                assert len(job_ids_in_this_replicate) == 2, (
+                    "Enthalpy of vaporization requires two jobs (gas and liquid)"
+                )
+                with (
+                    open(
+                        epoch_dir / "simulations" / job_ids_in_this_replicate[0] / "compute_config.json",
+                    ) as f0,
+                    open(epoch_dir / "simulations" / job_ids_in_this_replicate[1] / "compute_config.json") as f1,
+                ):
+                    compute_config0 = json.load(f0)
+                    compute_config1 = json.load(f1)
+
+                    if compute_config0["tag"] == "liquid" and compute_config1["tag"] == "gas":
+                        liquid_job_id = job_ids_in_this_replicate[0]
+                        liquid_config = compute_config0
+
+                        gas_job_id = job_ids_in_this_replicate[1]
+                        gas_config = compute_config1
+
+                    elif compute_config0["tag"] == "gas" and compute_config1["tag"] == "liquid":
+                        gas_job_id = job_ids_in_this_replicate[0]
+                        gas_config = compute_config0
+
+                        liquid_job_id = job_ids_in_this_replicate[1]
+                        liquid_config = compute_config1
+
+                    else:
+                        raise ValueError(
+                            f"Unexpected conmpute configs with tags {compute_config0['tag']} and "
+                            f"{compute_config1['tag']}"
+                        )
+
+                assert gas_config["temperature"] == liquid_config["temperature"], (
+                    "Gas and liquid temperatures must be the same for dHvap calculation"
+                )
+
+                # these are stored in kcal/mol, so need to convert
+                gas_energy = observables[gas_job_id]["potential_energy"] * KCAL_TO_KJ
+                liquid_energy = observables[liquid_job_id]["potential_energy"] * KCAL_TO_KJ
+
+                n_molecules = liquid_config["n_molecules"]
+
+                # 0.00831446261815324
+                R = (1 * unit.avogadro_number * unit.boltzmann_constant).m_as("kJ/K")
+
+                dhvap = gas_energy - liquid_energy / n_molecules + R * gas_config["temperature"]  # kJ/mol
+
+                # TODO: Wrap this up into a logger.debug layer
+                # print(
+                #     f"Enthalpy of vaporization calculation (gas job id={gas_job_id}): {gas_energy=}, "
+                #     f"\n\t(liquid job id={liquid_job_id}): {liquid_energy=}, "
+                #     f"\n\t{n_molecules=}, {R=}, {gas_config['temperature']=}"
+                #     f"\n\t{dhvap=}"
+                # )
+
+                # should be kJ/mol here
+                values.append(dhvap)
+
+            mean: dict[str, str | torch.Tensor] = {"tag": entry["tag"], "value": torch.stack(values).mean()}
+            std: dict[str, str | torch.Tensor] = {"tag": entry["tag"], "std": torch.stack(values).std()}
+
+        else:
+            raise ValueError(f"I do not know what to do with {entry['tag']}")
+
+        means_and_stds.append((mean, std))
+
+    return means_and_stds
+
+
+def predict(
+    dataset: Dataset,
+    tensor_force_field: tyff.TensorForceField,
+    epoch_dir: Path,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    # in order to get all of the (remote) observables for all simulations run from this
+    # dataset, we need the job IDs of these
+
+    with open(epoch_dir / "simulations" / "target_job_map.json") as f:
+        target_compute_mapping = {tuple(k): v for k, v in json.load(f)}
+
+    this_datasets_ids: set[str] = set(entry["id"] for entry in dataset)  # type: ignore
+
+    # this needs to be refactored to pass in _targets_, not jobs.
+    # synonymous with pure density, but for others (dhmix, dhvap, etc.) need to
+    # collect information from multiple jobs (i.e. gas and liquid jobs for dhvap)
+    # and condense down to one value (dhvap) to be reported
+    job_ids: list[str] = list()
+
+    for (target_id, _target_tag, _, _, _), these_job_ids in target_compute_mapping.items():
+        if target_id in this_datasets_ids:
+            job_ids.extend(these_job_ids)
+
+    attached_observables = load_remote_observables(
+        force_field_per_epoch=tensor_force_field,
+        base_dir=epoch_dir,
+        job_ids=[x for sublist in job_ids for x in sublist],
     )
 
+    means_and_stds: list[tuple[dict[str, str | torch.Tensor], dict[str, str | torch.Tensor]]] = compute_properties(
+        dataset=dataset,
+        observables=attached_observables,
+        epoch_dir=epoch_dir,
+    )
 
-def default_config(phase: Phase, temperature: float, pressure: float | None) -> SimulationConfig:
-    """Return a default simulation configuration for the specified phase.
+    ref_values = torch.tensor([entry["value"] for entry in dataset])  # type: ignore
+    ref_stds = torch.tensor([entry["std"] for entry in dataset])  # type: ignore
+    predicted_values = torch.stack([mean["value"] for mean, _ in means_and_stds])  # type: ignore
+    predicted_stds = torch.stack([std["std"] for _, std in means_and_stds])  # type: ignore
 
-    Args:
-        phase: The phase to return the default configuration for.
-        temperature: The temperature [K] at which to run the simulation.
-        pressure: The pressure [kPa] at which to run the simulation.
-
-    Returns:
-        The default simulation configuration.
-    """
-
-    if phase.lower() == "bulk":
-        return _bulk_config(temperature, pressure)
-    elif phase.lower() == "vacuum":
-        return _vacuum_config(temperature, pressure)
-    else:
-        raise NotImplementedError(phase)
-
-
-def select_config(
-    phase: Phase,
-    temperature: float,
-    pressure: float | None,
-    custom_config: dict[str, SimulationConfig] | None = None,
-) -> SimulationConfig:
-    """
-    A helper method to choose the simulation config based on the phase
-        with the desired temperature and pressure.
-    If a custom configuration is not available the default will be used.
-
-    Args:
-        phase: The phase of the simulation.
-        temperature: The temperature [K] at which to run the simulation.
-        pressure: The pressure [kPa] at which to run the simulation
-        custom_config: The custom simulation configuration for each phase.
-
-    Returns:
-        The simulation configuration for the given phase.
-    """
-    if custom_config is None:
-        custom_config = {}
-
-    try:
-        config = custom_config[phase]
-        # edit the config with the desired temperature and pressure
-        temperature = temperature * openmm.unit.kelvin
-        pressure = pressure * openmm.unit.kilopascal
-        for stage in config.equilibrate:
-            if isinstance(stage, tyff.mm.SimulationConfig):
-                stage.temperature = temperature
-                stage.pressure = pressure
-
-        config.production.temperature = temperature
-        config.production.pressure = pressure
-
-    except KeyError:
-        config = default_config(phase=phase, temperature=temperature, pressure=pressure)
-
-    return config
-
-
-def _plan_simulations(
-    entries: list[DataEntry],
-    topologies: dict[str, tyff.TensorTopology],
-    simulation_config: dict[str, SimulationConfig] | None = None,
-) -> tuple[dict[Phase, _SystemDict], list[dict[str, SimulationKey]]]:
-    """Plan the simulations required to compute the properties in a dataset.
-
-    Args:
-        entries: The entries in the dataset.
-        topologies: The topologies of the molecules present in the dataset, with keys
-            of mapped SMILES patterns.
-        simulation_config: The (optional) simulation configuration, should contain
-            a config for each phase if not provided the default will be used.
-
-    Returns:
-        The systems to simulate and the simulations required to compute each property.
-    """
-    systems_per_phase: dict[Phase, _SystemDict] = {phase: {} for phase in PHASES}
-    simulations_per_entry = []
-
-    for entry in entries:
-        data_type = entry["tag"].lower()
-
-        if data_type not in DATA_TYPES:
-            raise NotImplementedError(data_type)
-
-        required_sims: dict[str, SimulationKey] = {}
-
-        bulk_config = select_config("bulk", entry["temperature"], entry["pressure"], simulation_config)
-        max_mols = bulk_config.max_mols
-
-        if _REQUIRES_BULK_SIM[data_type]:
-            key, system = _convert_entry_to_system(entry, topologies, max_mols)
-
-            systems_per_phase["bulk"][key] = system
-            required_sims["bulk"] = key
-
-        if _REQUIRES_PURE_SIM[data_type]:
-            for i, smiles in enumerate(entry["smiles"]):
-                key = SimulationKey((smiles,), (max_mols,), entry["temperature"], entry["pressure"])
-                system = tyff.TensorSystem([topologies[smiles]], [max_mols], True)  # type: ignore[index]
-
-                systems_per_phase["bulk"][key] = system
-                required_sims[f"bulk_{i}"] = key
-
-        if _REQUIRES_VACUUM_SIM[data_type]:
-            assert len(entry["smiles"]) == 1, "vacuum sims only support pure systems"
-
-            system = tyff.TensorSystem([topologies[entry["smiles"][0]]], [1], False)
-            key = SimulationKey((entry["smiles"][0],), (1,), entry["temperature"], None)
-
-            systems_per_phase["vacuum"][key] = system
-            required_sims["vacuum"] = key
-
-        simulations_per_entry.append(required_sims)
-
-    return systems_per_phase, simulations_per_entry
+    return ref_values, ref_stds, predicted_values, predicted_stds
