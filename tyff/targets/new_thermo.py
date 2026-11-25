@@ -310,8 +310,9 @@ def compute_properties(
 
                 # TODO: Wrap this up into a logger.debug layer
                 # print(
-                #     f"Enthalpy of vaporization calculation (job id={gas_job_id}): {gas_energy=}, {liquid_energy=}, "
-                #     f"{n_molecules=}, {R=}, {gas_config['temperature']=}"
+                #     f"Enthalpy of vaporization calculation (gas job id={gas_job_id}): {gas_energy=}, "
+                #     f"\n\t(liquid job id={liquid_job_id}): {liquid_energy=}, "
+                #     f"\n\t{n_molecules=}, {R=}, {gas_config['temperature']=}"
                 #     f"\n\t{dhvap=}"
                 # )
 
