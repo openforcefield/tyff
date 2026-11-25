@@ -95,7 +95,7 @@ def main(root: Path) -> None:
         if "hpc3" in socket.gethostname():
             parsl_config = hpc3_config(partition="gpu", account="dmobley_lab_gpu")
         else:
-            parsl_config = local_config(max_workers=8)
+            parsl_config = local_config(max_workers=4)
 
         simulate(
             tensor_force_field=current_ff,
@@ -149,7 +149,7 @@ def main(root: Path) -> None:
             this_loss = COEFFICIENTS[tag] * (results["y_pred"] - results["y_ref"]).square().mean()
             print(
                 f"\tthermo component {tag=} (coefficient {COEFFICIENTS[tag]}) "
-                f"has loss contribution {this_loss.item()=}"
+                f"has loss contribution {this_loss.item():.6f}"
             )
             loss += this_loss
 

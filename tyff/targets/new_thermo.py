@@ -10,8 +10,6 @@ from openff.toolkit import ForceField
 from openff.units import unit
 
 import tyff
-import tyff.converters
-import tyff.train
 from tyff.compute.workflow import SimulationWorkflow
 from tyff.converters.openff._tensors import convert_tensor_force_field
 from tyff.mm._ops import RemoteEnsembleAverage
@@ -144,9 +142,10 @@ def compute_properties(
     dataset: Dataset,
     observables: dict[str, dict[str, torch.Tensor]],
     epoch_dir: Path,
-) -> list[tuple[dict[str, torch.Tensor], dict[str, torch.Tensor]]]:
+) -> list[tuple[dict[str, str | torch.Tensor], dict[str, str | torch.Tensor]]]:
 
-    means_and_stds: list[tuple[dict[str, torch.Tensor], dict[str, torch.Tensor]]] = list()
+    # TODO: Make this list[tuple[dict[str, torch.Tensor], dict[str, torch.Tensor]]] = list()
+    means_and_stds: list[tuple[dict[str, str | torch.Tensor], dict[str, str | torch.Tensor]]] = list()
 
     # think about better standardizing some of these paths
     with open(epoch_dir / "simulations" / "target_job_map.json") as f:
@@ -162,25 +161,16 @@ def compute_properties(
                 if target_id == entry["id"]:
                     break
 
-            # this is set with an iteration variable - can we assume that
-            # this will be the same for all job_ids within this target?
-            # all targets will be the same (i.e. always computing dhvap)
-            # but job-to-job maybe not? (i.e. gas vs. liquid jobs)
-            types_of_observables = [*observables[job_ids[0][0]].keys()]
-
-            # could be simpler to return these as 1-D tensors - make sure to sort
-            # keys to avoid ordering issues
-            mean: dict[str, torch.Tensor] = {
-                key: torch.stack([observables[job_id[0]][key] for job_id in job_ids]).mean()
-                for key in types_of_observables
+            # probably don't need to carry the tag, maybe just return the value?
+            mean: dict[str, str | torch.Tensor] = {
+                "tag": entry["tag"],
+                "value": torch.stack([observables[job_id[0]]["density"] for job_id in job_ids]).mean(),
             }
-            std: dict[str, torch.Tensor] = {
-                key: torch.stack([observables[job_id[0]][key] for job_id in job_ids]).std()
-                for key in types_of_observables
+            std: dict[str, str | torch.Tensor] = {
+                "tag": entry["tag"],
+                "std": torch.stack([observables[job_id[0]]["density"] for job_id in job_ids]).std(),
             }
 
-            # figure out which job id/s (if multiple replicas) in the observable corresponds to
-            # and calculate means and stds
         elif entry["tag"] == "dielectric_constant":
             raise NotImplementedError()
             # likely identical to density case
@@ -258,10 +248,8 @@ def compute_properties(
 
                     values.append(dhmix * KCAL_TO_KJ)  # convert to kJ/mol
 
-            types_of_observables = [*observables[job_ids[0][0]].keys()]
-
-            mean: dict[str, torch.Tensor] = {key: torch.stack(values).mean() for key in types_of_observables}
-            std: dict[str, torch.Tensor] = {key: torch.stack(values).std() for key in types_of_observables}
+            mean: dict[str, str | torch.Tensor] = {"tag": entry["tag"], "value": torch.stack(values).mean()}
+            std: dict[str, str | torch.Tensor] = {"tag": entry["tag"], "std": torch.stack(values).std()}
 
         elif entry["tag"] == "excess_molar_volume":
             raise NotImplementedError()
@@ -318,34 +306,20 @@ def compute_properties(
                 # 0.00831446261815324
                 R = (1 * unit.avogadro_number * unit.boltzmann_constant).m_as("kJ/K")
 
-                print(
-                    f"Enthalpy of vaporization calculation (job id={gas_job_id}): {gas_energy=}, {liquid_energy=}, "
-                    f"{n_molecules=}, {R=}, {gas_config['temperature']=}"
-                )
-
-                # Enthalpy of vaporization calculation:
-                #     gas_energy=tensor(1308.0884, dtype=torch.float64),
-                #     liquid_energy=tensor(386691.8175, dtype=torch.float64),
-                #     n_molecules=240,
-                #     R=0.00831446261815324,
-                #     gas_config['temperature']=300.0
-                #
-                # Enthalpy of vaporization calculation:
-                #     gas_energy=tensor(1300.6276, dtype=torch.float64),
-                #     liquid_energy=tensor(385886.6263, dtype=torch.float64),
-                #     n_molecules=240,
-                #     R=0.00831446261815324,
-                #     gas_config['temperature']=300.0
-
                 dhvap = gas_energy - liquid_energy / n_molecules + R * gas_config["temperature"]  # kJ/mol
 
+                # TODO: Wrap this up into a logger.debug layer
+                # print(
+                #     f"Enthalpy of vaporization calculation (job id={gas_job_id}): {gas_energy=}, {liquid_energy=}, "
+                #     f"{n_molecules=}, {R=}, {gas_config['temperature']=}"
+                #     f"\n\t{dhvap=}"
+                # )
+
+                # should be kJ/mol here
                 values.append(dhvap)
 
-            # assume the types of observables are uniform across all these job IDs
-            types_of_observables = [*observables[job_ids[0][0]].keys()]
-
-            mean: dict[str, torch.Tensor] = {key: torch.stack(values).mean() for key in types_of_observables}
-            std: dict[str, torch.Tensor] = {key: torch.stack(values).std() for key in types_of_observables}
+            mean: dict[str, str | torch.Tensor] = {"tag": entry["tag"], "value": torch.stack(values).mean()}
+            std: dict[str, str | torch.Tensor] = {"tag": entry["tag"], "std": torch.stack(values).std()}
 
         else:
             raise ValueError(f"I do not know what to do with {entry['tag']}")
@@ -384,20 +358,15 @@ def predict(
         job_ids=[x for sublist in job_ids for x in sublist],
     )
 
-    means_and_stds: list[tuple[dict[str, torch.Tensor], dict[str, torch.Tensor]]] = compute_properties(
+    means_and_stds: list[tuple[dict[str, str | torch.Tensor], dict[str, str | torch.Tensor]]] = compute_properties(
         dataset=dataset,
         observables=attached_observables,
         epoch_dir=epoch_dir,
     )
 
-    ref_values = [entry["value"] for entry in dataset]  # type: ignore
-    ref_stds = [entry["std"] for entry in dataset]  # type: ignore
-    predicted_values = [mean["density"] for mean, _ in means_and_stds]
-    predicted_stds = [std["density"] for _, std in means_and_stds]
-
-    ref_values = torch.tensor(ref_values)
-    ref_stds = torch.tensor(ref_stds)
-    predicted_values = torch.stack(predicted_values)
-    predicted_stds = torch.stack(predicted_stds)
+    ref_values = torch.tensor([entry["value"] for entry in dataset])  # type: ignore
+    ref_stds = torch.tensor([entry["std"] for entry in dataset])  # type: ignore
+    predicted_values = torch.stack([mean["value"] for mean, _ in means_and_stds])  # type: ignore
+    predicted_stds = torch.stack([std["std"] for _, std in means_and_stds])  # type: ignore
 
     return ref_values, ref_stds, predicted_values, predicted_stds
