@@ -95,11 +95,11 @@ def main(root: Path) -> None:
         if "hpc3" in socket.gethostname():
             parsl_config = hpc3_config(partition="gpu", account="dmobley_lab_gpu")
         else:
-            parsl_config = local_config(max_workers=4)
+            parsl_config = local_config(max_workers=6)
 
         simulate(
-            tensor_force_field=current_ff,
             parsl_config=parsl_config,
+            tensor_force_field=current_ff,
             epoch_dir=root / f"EPOCH_{epoch}",
             thermo_data=thermo_data,
             smirnoff_force_field=INITIAL_FORCE_FIELD,

@@ -19,8 +19,8 @@ KCAL_TO_KJ = 4.184
 
 
 def simulate(
-    tensor_force_field: tyff.TensorForceField,
     parsl_config: parsl.Config,
+    tensor_force_field: tyff.TensorForceField,
     epoch_dir: Path,
     thermo_data: Dataset,
     smirnoff_force_field: str,
