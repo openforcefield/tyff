@@ -9,8 +9,7 @@ from tyff.compute.configs import local_config
 from tyff.compute.workflow import SimulationWorkflow
 from tyff.converters import topologies_for
 from tyff.targets import thermo
-from tyff.targets.new_thermo import predict, simulate
-from tyff.targets.thermo import create_dataset
+from tyff.targets.thermo import create_dataset, predict, simulate
 
 # this variable is magically detected by pytest, important that it is defined at module level
 pytestmark = pytest.mark.gpu
@@ -154,7 +153,7 @@ class TestDensity:
 
             workflow.wait()
 
-            # TODO: Replace this with tyff.targets.new_thermo.predict, which
+            # TODO: Replace this with tyff.targets.thermo.predict, which
             #       itself should probably be moved to SimulationWorkflow.estimate_dataset
             job_dirs = [
                 path

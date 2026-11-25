@@ -1,11 +1,11 @@
 """Train against thermodynamic properties."""
 
-import contextlib
+from __future__ import annotations
+
 import copy
-import hashlib
+import json
 import logging
 import pathlib
-import pickle
 import typing
 
 import datasets
@@ -15,13 +15,17 @@ import openmm.unit
 import pyarrow
 import pydantic
 import torch
+from openff.units import unit
 
+import tyff
 import tyff.mm
 import tyff.molecule
 import tyff.optim
 import tyff.utils
 import tyff.utils.dataset
 import tyff.utils.loss
+
+KCAL_TO_KJ = 4.184
 
 if typing.TYPE_CHECKING:
     import tyff.train
@@ -173,9 +177,6 @@ def create_from_evaluator(dataset_file: pathlib.Path) -> datasets.Dataset:
     Returns:
         The created dataset
     """
-    import json
-
-    from openff.units import unit
 
     _evaluator_to_prop = {
         "openff.evaluator.properties.density.Density": "density",
@@ -228,6 +229,60 @@ def create_from_evaluator(dataset_file: pathlib.Path) -> datasets.Dataset:
         properties.append(prop)
 
     return create_dataset(*properties)
+
+
+def default_closure(
+    trainable: tyff.train.Trainable,
+    topologies: dict[str, tyff.TensorTopology],
+    dataset: datasets.Dataset,
+    per_type_scales: dict[DataType, float] | None = None,
+    verbose: bool = False,
+    simulation_config: dict[str, SimulationConfig] | None = None,
+) -> tyff.optim.ClosureFn:
+    """Return a default closure function for training against thermodynamic
+    properties.
+
+    Args:
+        trainable: The wrapper around trainable parameters.
+        topologies: The topologies of the molecules present in the dataset, with keys
+            of mapped SMILES patterns.
+        dataset: The dataset to train against.
+        per_type_scales: The scale factor to apply to each data type.
+        verbose: Whether to log additional information about predictions.
+        simulation_config: The (optional) simulation configuration, should contain
+            a config for each phase if not provided the default will be used.
+
+    Returns:
+        The default closure function.
+    """
+
+    def closure_fn(
+        x: torch.Tensor,
+        compute_gradient: bool,
+        compute_hessian: bool,
+    ):
+        force_field = trainable.to_force_field(x)
+
+        y_ref, _, y_pred, _ = tyff.targets.thermo.predict(  # type: ignore[attr-defined]
+            dataset,
+            force_field,
+            topologies,
+            pathlib.Path.cwd(),
+            None,
+            per_type_scales,
+            verbose,
+            simulation_config,
+        )
+        loss, gradient, hessian = ((y_pred - y_ref) ** 2).sum(), None, None
+
+        if compute_hessian:
+            hessian = tyff.utils.loss.approximate_hessian(x, y_pred)
+        if compute_gradient:
+            gradient = torch.autograd.grad(loss, x, retain_graph=True)[0].detach()
+
+        return loss.detach(), gradient, hessian
+
+    return closure_fn
 
 
 def extract_smiles(dataset: datasets.Dataset) -> list[str]:
@@ -485,319 +540,3 @@ def _plan_simulations(
         simulations_per_entry.append(required_sims)
 
     return systems_per_phase, simulations_per_entry
-
-
-def _simulate(
-    system: tyff.TensorSystem,
-    force_field: tyff.TensorForceField,
-    config: SimulationConfig,
-    output_path: pathlib.Path,
-):
-    """Simulate a system.
-
-    Args:
-        system: The system to simulate.
-        force_field: The force field to use.
-        config: The simulation configuration to use.
-        output_path: The path at which to write the simulation trajectory.
-    """
-    coords, box_vectors = tyff.mm.generate_system_coords(system, force_field, config.gen_coords)
-
-    beta = 1.0 / (openmm.unit.MOLAR_GAS_CONSTANT_R * config.production.temperature)
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    with output_path.open("wb") as output:
-        reporter = tyff.mm.TensorReporter(output, config.production_frequency, beta, config.production.pressure)
-        tyff.mm.simulate(
-            system,
-            force_field,
-            coords,
-            box_vectors,
-            config.equilibrate,
-            config.production,
-            [reporter],
-            config.apply_hmr,
-        )
-
-
-def _compute_observables(
-    phase: Phase,
-    key: SimulationKey,
-    system: tyff.TensorSystem,
-    force_field: tyff.TensorForceField,
-    output_dir: pathlib.Path,
-    cached_dir: pathlib.Path | None,
-    simulation_config: dict[str, SimulationConfig] | None = None,
-) -> _Observables:
-    traj_hash = hashlib.sha256(pickle.dumps(key)).hexdigest()
-    traj_name = f"{phase}-{traj_hash}-frames.msgpack"
-
-    cached_path = None if cached_dir is None else cached_dir / traj_name
-
-    temperature = key.temperature * openmm.unit.kelvin
-    pressure = None if key.pressure is None else key.pressure * openmm.unit.kilopascals
-
-    if cached_path is not None and cached_path.exists():
-        with contextlib.suppress(tyff.mm.NotEnoughSamplesError):
-            means = tyff.mm.reweight_ensemble_averages(system, force_field, cached_path, temperature, pressure)
-            stds = {key: tyff.utils.tensor_like(torch.nan, means[key]) for key in means}
-
-            return _Observables(means, stds)
-
-    if cached_path is not None:
-        _LOGGER.debug(f"unable to re-weight {key}: data exists={cached_path.exists()}")
-
-    output_path = output_dir / traj_name
-
-    config = select_config(
-        phase=phase,
-        temperature=key.temperature,
-        pressure=key.pressure,
-        custom_config=simulation_config,
-    )
-    _simulate(system, force_field, config, output_path)
-
-    return _Observables(*tyff.mm.compute_ensemble_averages(system, force_field, output_path, temperature, pressure))
-
-
-def _predict_density(entry: DataEntry, observables: _Observables) -> tuple[torch.Tensor, torch.Tensor | None]:
-    assert entry["units"] == "g/mL"
-    return observables.mean["density"], observables.std["density"]
-
-
-def _predict_hvap(
-    entry: DataEntry,
-    observables_bulk: _Observables,
-    observables_vacuum: _Observables,
-    system_bulk: tyff.TensorSystem,
-) -> tuple[torch.Tensor, torch.Tensor]:
-    assert entry["units"] == "kcal/mol"
-
-    temperature = entry["temperature"] * openmm.unit.kelvin
-    n_mols = sum(system_bulk.n_copies)
-
-    potential_bulk = observables_bulk.mean["potential_energy"] / n_mols
-    potential_bulk_std = observables_bulk.std["potential_energy"] / n_mols
-
-    potential_vacuum = observables_vacuum.mean["potential_energy"]
-    potential_vacuum_std = observables_vacuum.std["potential_energy"]
-
-    rt = (temperature * openmm.unit.MOLAR_GAS_CONSTANT_R).value_in_unit(openmm.unit.kilocalorie_per_mole)
-
-    value = potential_vacuum - potential_bulk + rt
-    std = torch.sqrt(potential_vacuum_std**2 + potential_bulk_std**2)
-
-    return value, std
-
-
-def _predict_hmix(
-    entry: DataEntry,
-    observables_mix: _Observables,
-    observables_0: _Observables,
-    observables_1: _Observables,
-    system_mix: tyff.TensorSystem,
-    system_0: tyff.TensorSystem,
-    system_1: tyff.TensorSystem,
-) -> tuple[torch.Tensor, torch.Tensor | None]:
-    assert entry["units"] == "kcal/mol"
-
-    n_mols_mix = sum(system_mix.n_copies)
-    n_mols_0 = sum(system_0.n_copies)
-    n_mols_1 = sum(system_1.n_copies)
-
-    x_0 = system_mix.n_copies[0] / n_mols_mix
-    x_1 = 1.0 - x_0
-
-    enthalpy_mix = observables_mix.mean["enthalpy"] / n_mols_mix
-    enthalpy_mix_std = observables_mix.std["enthalpy"] / n_mols_mix
-
-    enthalpy_0 = observables_0.mean["enthalpy"] / n_mols_0
-    enthalpy_0_std = observables_0.std["enthalpy"] / n_mols_0
-    enthalpy_1 = observables_1.mean["enthalpy"] / n_mols_1
-    enthalpy_1_std = observables_1.std["enthalpy"] / n_mols_1
-
-    value = enthalpy_mix - x_0 * enthalpy_0 - x_1 * enthalpy_1
-    std = torch.sqrt(enthalpy_mix_std**2 + x_0**2 * enthalpy_0_std**2 + x_1**2 * enthalpy_1_std**2)
-
-    return value, std
-
-
-def _predict(
-    entry: DataEntry,
-    keys: dict[str, SimulationKey],
-    observables: dict[Phase, dict[SimulationKey, _Observables]],
-    systems: dict[Phase, dict[SimulationKey, tyff.TensorSystem]],
-) -> tuple[torch.Tensor, torch.Tensor | None]:
-    if entry["tag"] == "density":
-        value = _predict_density(entry, observables["bulk"][keys["bulk"]])
-    elif entry["tag"] == "hvap":
-        value = _predict_hvap(
-            entry,
-            observables["bulk"][keys["bulk"]],
-            observables["vacuum"][keys["vacuum"]],
-            systems["bulk"][keys["bulk"]],
-        )
-    elif entry["tag"] == "hmix":
-        value = _predict_hmix(
-            entry,
-            observables["bulk"][keys["bulk"]],
-            observables["bulk"][keys["bulk_0"]],
-            observables["bulk"][keys["bulk_1"]],
-            systems["bulk"][keys["bulk"]],
-            systems["bulk"][keys["bulk_0"]],
-            systems["bulk"][keys["bulk_1"]],
-        )
-    else:
-        raise NotImplementedError(entry["tag"])
-
-    return value
-
-
-def predict(
-    dataset: datasets.Dataset,
-    force_field: tyff.TensorForceField,
-    topologies: dict[str, tyff.TensorTopology],
-    output_dir: pathlib.Path,
-    cached_dir: pathlib.Path | None = None,
-    per_type_scales: dict[DataType, float] | None = None,
-    verbose: bool = False,
-    simulation_config: dict[str, SimulationConfig] | None = None,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-    """Predict the properties in a dataset using molecular simulation, or by reweighting
-    previous simulation data.
-
-    Args:
-        dataset: The dataset to predict the properties of.
-        force_field: The force field to use.
-        topologies: The topologies of the molecules present in the dataset, with keys
-            of mapped SMILES patterns.
-        output_dir: The directory to write the simulation trajectories to.
-        cached_dir: The (optional) directory to read cached simulation trajectories
-            from.
-        per_type_scales: The scale factor to apply to each data type. A default of 1.0
-            will be used for any data type not specified.
-        verbose: Whether to log additional information.
-        simulation_config: The (optional) simulation configuration, should contain
-            a config for each phase if not provided the default will be used.
-    """
-
-    # unclear if this should be list[DataEntry] or list[dict]
-    entries: list[DataEntry] = [*tyff.utils.dataset.iter_dataset(dataset)]  # type: ignore[list-item]
-
-    required_simulations, entry_to_simulation = _plan_simulations(entries, topologies, simulation_config)
-    observables = {
-        phase: {
-            key: _compute_observables(
-                phase,
-                key,
-                system,
-                force_field,
-                output_dir,
-                cached_dir,
-                simulation_config,
-            )
-            for key, system in systems.items()
-        }
-        for phase, systems in required_simulations.items()
-    }
-
-    predicted = []
-    predicted_std = []
-    reference = []
-    reference_std = []
-
-    verbose_rows = []
-
-    per_type_scales = per_type_scales if per_type_scales is not None else {}
-
-    for entry, keys in zip(entries, entry_to_simulation, strict=True):
-        value, std = _predict(entry, keys, observables, required_simulations)
-
-        type_scale = per_type_scales.get(entry["tag"], 1.0)
-
-        predicted.append(value * type_scale)
-        predicted_std.append(torch.nan if std is None else std * abs(type_scale))
-
-        reference.append(entry["value"] * type_scale)
-        reference_std.append(torch.nan if entry["std"] is None else entry["std"] * abs(type_scale))
-
-        if verbose:
-            std_ref = "" if entry["std"] is None else f" ± {float(entry['std']):.3f}"
-
-            verbose_rows.append(
-                {
-                    "tag": f"{entry['tag']} [{entry['units']}]",
-                    "smiles": [tyff.molecule.unmap_smiles(smiles) for smiles in entry["smiles"]],
-                    "pred": f"{float(value):.3f} ± {float(std):.3f}",
-                    "ref": f"{float(entry['value']):.3f}{std_ref}",
-                }
-            )
-
-    if verbose:
-        import pandas
-
-        _LOGGER.info(f"predicted {len(entries)} properties")
-        _LOGGER.info("\n" + pandas.DataFrame(verbose_rows).to_string(index=False))
-
-    predicted = torch.stack(predicted)
-    predicted_std = torch.stack(predicted_std)
-
-    reference = tyff.utils.tensor_like(reference, predicted)
-    reference_std = tyff.utils.tensor_like(reference_std, predicted_std)
-
-    return reference, reference_std, predicted, predicted_std
-
-
-def default_closure(
-    trainable: "tyff.train.Trainable",
-    topologies: dict[str, tyff.TensorTopology],
-    dataset: datasets.Dataset,
-    per_type_scales: dict[DataType, float] | None = None,
-    verbose: bool = False,
-    simulation_config: dict[str, SimulationConfig] | None = None,
-) -> tyff.optim.ClosureFn:
-    """Return a default closure function for training against thermodynamic
-    properties.
-
-    Args:
-        trainable: The wrapper around trainable parameters.
-        topologies: The topologies of the molecules present in the dataset, with keys
-            of mapped SMILES patterns.
-        dataset: The dataset to train against.
-        per_type_scales: The scale factor to apply to each data type.
-        verbose: Whether to log additional information about predictions.
-        simulation_config: The (optional) simulation configuration, should contain
-            a config for each phase if not provided the default will be used.
-
-    Returns:
-        The default closure function.
-    """
-
-    def closure_fn(
-        x: torch.Tensor,
-        compute_gradient: bool,
-        compute_hessian: bool,
-    ):
-        force_field = trainable.to_force_field(x)
-
-        y_ref, _, y_pred, _ = tyff.targets.thermo.predict(  # type: ignore[attr-defined]
-            dataset,
-            force_field,
-            topologies,
-            pathlib.Path.cwd(),
-            None,
-            per_type_scales,
-            verbose,
-            simulation_config,
-        )
-        loss, gradient, hessian = ((y_pred - y_ref) ** 2).sum(), None, None
-
-        if compute_hessian:
-            hessian = tyff.utils.loss.approximate_hessian(x, y_pred)
-        if compute_gradient:
-            gradient = torch.autograd.grad(loss, x, retain_graph=True)[0].detach()
-
-        return loss.detach(), gradient, hessian
-
-    return closure_fn
