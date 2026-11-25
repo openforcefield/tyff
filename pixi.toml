@@ -61,12 +61,8 @@ gpu = ["py312", "cu122", "test", "openeye", "packmol"]
 [environments.dev]
 features = ["py312", "openeye", "test", "typing", "dev"]
 
-[environments.dev.dependencies]
-pymol-open-source = ">=3.1.0,<4"
-
 [feature.dev.dependencies]
-# these PyPI builds are marked as pre-release only for some reason
-pymol-open-source = "*"
+pymol-open-source = ">=3.1.0,<4"
 
 [feature.dev.pypi-dependencies]
 pre-commit = "*"
