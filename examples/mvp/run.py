@@ -26,8 +26,8 @@ INITIAL_FORCE_FIELD = "openff-2.3.0.offxml"
 COEFFICIENTS = {
     "energy": 0.1,
     "force": 0.01,
-    "density": 1_000.0,
-    "enthalpy_of_mixing": 1.0,
+    "density": 10_000.0,
+    "enthalpy_of_mixing": 100.0,
     "enthalpy_of_vaporization": 1.0,
 }
 
@@ -155,7 +155,7 @@ def main(root: Path) -> None:
 
         logger.info(f"EPOCH {epoch}: loss={loss.item():.6f}")
 
-        print(f"EPOCH {epoch}: total loss={loss.item():.6f}")
+        print(f"\n\nEPOCH {epoch}: total loss={loss.item():.6f}\n")
 
         optimizer.zero_grad()
 

@@ -28,7 +28,7 @@ import tyff.utils.loss
 from tyff.converters.openff._tensors import convert_tensor_force_field
 from tyff.mm._ops import RemoteEnsembleAverage
 
-KCAL_TO_KJ = 4.184
+KJ_TO_KCAL = 1 / 4.184
 
 if typing.TYPE_CHECKING:
     import tyff.train
@@ -430,7 +430,7 @@ def compute_properties(
                         for x_i, component_energy_i, n_i in zip(x, component_energies, component_n_molecules)
                     )
 
-                    values.append(dhmix * KCAL_TO_KJ)  # convert to kJ/mol
+                    values.append(dhmix)  # leave in kcal/mol
 
             mean: dict[str, str | torch.Tensor] = {"tag": entry["tag"], "value": torch.stack(values).mean()}
             std: dict[str, str | torch.Tensor] = {"tag": entry["tag"], "std": torch.stack(values).std()}
@@ -481,16 +481,16 @@ def compute_properties(
                     "Gas and liquid temperatures must be the same for dHvap calculation"
                 )
 
-                # these are stored in kcal/mol, so need to convert
-                gas_energy = observables[gas_job_id]["potential_energy"] * KCAL_TO_KJ
-                liquid_energy = observables[liquid_job_id]["potential_energy"] * KCAL_TO_KJ
+                # these are stored in kcal/mol
+                gas_energy = observables[gas_job_id]["potential_energy"]
+                liquid_energy = observables[liquid_job_id]["potential_energy"]
 
                 n_molecules = liquid_config["n_molecules"]
 
-                # 0.00831446261815324
-                R = (1 * unit.avogadro_number * unit.boltzmann_constant).m_as("kJ/K")
+                # 0.0019872042586408316, or  0.00831446261815324 / 4.184
+                R = (1 * unit.avogadro_number * unit.boltzmann_constant).m_as("kcal/K")
 
-                dhvap = gas_energy - liquid_energy / n_molecules + R * gas_config["temperature"]  # kJ/mol
+                dhvap = gas_energy - liquid_energy / n_molecules + R * gas_config["temperature"]  # still kcal/mol
 
                 # TODO: Wrap this up into a logger.debug layer
                 # print(
@@ -500,7 +500,7 @@ def compute_properties(
                 #     f"\n\t{dhvap=}"
                 # )
 
-                # should be kJ/mol here
+                # should still be kcal/mol here
                 values.append(dhvap)
 
             mean: dict[str, str | torch.Tensor] = {"tag": entry["tag"], "value": torch.stack(values).mean()}
