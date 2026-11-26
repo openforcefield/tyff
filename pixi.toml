@@ -54,14 +54,15 @@ panel = "*"
 [environments]
 py312amber = ["py312", "ambertools", "test", "typing"]
 py312openeye = ["py312", "openeye", "packmol", "test", "typing"]
-dev = ["py312", "openeye", "test", "typing", "dev"]
 hpc3 = ["py312", "cu130", "openeye", "packmol"]
 # the AMI we use seems to have 12.2 installed, this is custom for that situation
 gpu = ["py312", "cu122", "test", "openeye", "packmol"]
 
+[environments.dev]
+features = ["py312", "openeye", "test", "typing", "dev"]
+
 [feature.dev.dependencies]
-# these PyPI builds are marked as pre-release only for some reason
-pymol-open-source = "*"
+pymol-open-source = ">=3.1.0,<4"
 
 [feature.dev.pypi-dependencies]
 pre-commit = "*"

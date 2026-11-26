@@ -62,7 +62,19 @@ class SimulationWorkflow:
                     self._target_compute_mapping = loaded_mapping
         else:
             # initialize to empty dict otherwise
-            self._target_compute_mapping: dict[tuple[str, str, int, int], list[tuple[str, ...]]] = dict()
+            self._target_compute_mapping: dict[
+                tuple[
+                    str,  # target id
+                    str,  # target tag
+                    str,  # force field path
+                    int,  # n_molecules
+                    int,  # n_replicates
+                ],
+                list[  # len n_replicates
+                    # each job_dir in this replicate, i.e. 1 for density, 2 for dhvap, 3 for dhmix, etc.
+                    tuple[str, ...]
+                ],
+            ] = dict()
 
         # futures submitted via submit_target/submit_target_batch that haven't
         # been waited on yet; drained by wait()
@@ -136,6 +148,7 @@ class SimulationWorkflow:
         self._target_compute_mapping[
             (
                 target_config["id"],  # this is unmodified from input data and therefore could look funky
+                target_config["tag"],  # this is unmodified from input data and therefore could look funky
                 force_field,
                 n_molecules,
                 n_replicates,
@@ -145,6 +158,7 @@ class SimulationWorkflow:
             self._target_compute_mapping[
                 (
                     target_config["id"],
+                    target_config["tag"],
                     force_field,
                     n_molecules,
                     n_replicates,
@@ -237,7 +251,15 @@ class SimulationWorkflow:
         if target_config["tag"] == "density":
             # pull job ids for all replicates of this target/force field/n_molecules combination
             # TODO: other querying into jobs i.e. given a target and force field but any n_molecules
-            job_ids = self._target_compute_mapping[(target_config["id"], force_field, n_molecules, n_replicates)]
+            job_ids = self._target_compute_mapping[
+                (
+                    target_config["id"],
+                    target_config["tag"],
+                    force_field,
+                    n_molecules,
+                    n_replicates,
+                )
+            ]
 
             density_futures = [
                 run_density_analysis(
@@ -258,7 +280,15 @@ class SimulationWorkflow:
         elif target_config["tag"] == "enthalpy_of_vaporization":
             # pull job ids for all replicates of this target/force field/n_molecules combination
             # TODO: other querying into jobs i.e. given a target and force field but any n_molecules
-            job_ids = self._target_compute_mapping[(target_config["id"], force_field, n_molecules, n_replicates)]
+            job_ids = self._target_compute_mapping[
+                (
+                    target_config["id"],
+                    target_config["tag"],
+                    force_field,
+                    n_molecules,
+                    n_replicates,
+                )
+            ]
 
             dhvap_futures = [
                 # this function should separate the two job ids into gas and liquid,
@@ -280,6 +310,16 @@ class SimulationWorkflow:
 
         else:
             raise ValueError(f"Unknown target tag {target_config['tag']}")
+
+    def estimate_dataset(
+        self,
+        dataset: datasets.Dataset,  # should be something that unpacks to DataEntry on iteration
+        tensor_force_field: tyff.TensorForceField,
+        force_field: str,
+        n_molecules: int,
+        n_replicates: int = 3,
+    ):
+        raise NotImplementedError()
 
     def run(self, compute_configs: Sequence[BaseComputeConfig]):
         """Submit a batch and block until all complete."""

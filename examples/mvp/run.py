@@ -13,12 +13,12 @@ from tyff.compute._logging import _set_up_logger
 from tyff.compute.configs import hpc3_config, local_config
 from tyff.converters import convert_tensor_force_field, topologies_for
 from tyff.targets import energy, thermo
-from tyff.targets.new_thermo import predict, simulate
+from tyff.targets.thermo import predict, simulate
 from tyff.train import ParameterConfig, Trainable
 
 N_EPOCHS = 10
-N_REPLICATES = 2
-N_MOLECULES = 200
+N_REPLICATES = 3
+N_MOLECULES = 480
 INITIAL_FORCE_FIELD = "openff-2.3.0.offxml"
 
 # these weights should be exposed to the user in some sort of training config
@@ -26,7 +26,9 @@ INITIAL_FORCE_FIELD = "openff-2.3.0.offxml"
 COEFFICIENTS = {
     "energy": 0.1,
     "force": 0.01,
-    "thermo": 100_000.0,
+    "density": 10_000.0,
+    "enthalpy_of_mixing": 100.0,
+    "enthalpy_of_vaporization": 1.0,
 }
 
 
@@ -42,9 +44,6 @@ def load_datasets(root: Path) -> tuple[Dataset, Dataset]:
 
     thermo_data = Dataset.load_from_disk(root / "data/thermo")
     energy_data = Dataset.load_from_disk(root / "data/energy")
-
-    # temporary - need to go back and add dhmix, dhvap, etc.
-    thermo_data = thermo_data.filter(lambda x: x["tag"] == "density")
 
     logger.info(f"Loaded {len(thermo_data)} thermo entries and {len(energy_data)} energy entries")
 
@@ -84,14 +83,14 @@ def main(root: Path) -> None:
 
     theta = trainable.to_values().requires_grad_(True)
 
-    # TODO: Possible drop in L-M optimizer
+    # TODO: Possibly drop in L-M optimizer
     optimizer = Adam([theta], lr=0.01)
 
     # TODO: inner/outer loop, or any way of stepping through QM optimization
     #       without running MD jobs each time
     for epoch in range(N_EPOCHS):
-        # this is linked under the hood to theta - needed to gradients together
-        current_ff = trainable.to_force_field(theta)  # 287
+        # this is linked under the hood to theta - needed to hook gradients together
+        current_ff = trainable.to_force_field(theta)
 
         if "hpc3" in socket.gethostname():
             parsl_config = hpc3_config(partition="gpu", account="dmobley_lab_gpu")
@@ -100,7 +99,7 @@ def main(root: Path) -> None:
 
         simulate(
             parsl_config=parsl_config,
-            force_field=current_ff,
+            tensor_force_field=current_ff,
             epoch_dir=root / f"EPOCH_{epoch}",
             thermo_data=thermo_data,
             smirnoff_force_field=INITIAL_FORCE_FIELD,
@@ -108,11 +107,23 @@ def main(root: Path) -> None:
             n_molecules=N_MOLECULES,
         )
 
-        y_ref, _y_ref_std, y_pred, _y_pred_std = predict(
-            dataset=thermo_data,
-            force_field=current_ff,
-            epoch_dir=root / f"EPOCH_{epoch}",
-        )
+        thermo_results = dict()
+
+        for tag in {*thermo_data["tag"]}:
+            thermo_subset = thermo_data.filter(lambda x: x["tag"] == tag)
+
+            y_ref, y_ref_std, y_pred, y_pred_std = predict(
+                dataset=thermo_subset,
+                tensor_force_field=current_ff,
+                epoch_dir=root / f"EPOCH_{epoch}",
+            )
+
+            thermo_results[tag] = {
+                "y_ref": y_ref,
+                "y_ref_std": y_ref_std,
+                "y_pred": y_pred,
+                "y_pred_std": y_pred_std,
+            }
 
         energy_ref, energy_pred, forces_ref, forces_pred = energy.predict(
             energy_data,
@@ -121,19 +132,30 @@ def main(root: Path) -> None:
             normalize=False,
         )
 
-        # can construct loss function in many different ways, including modifying coefficients
-        loss = (
-            COEFFICIENTS["energy"] * (energy_pred - energy_ref).square().mean()
-            + COEFFICIENTS["force"] * (forces_pred - forces_ref).square().mean()
-            + COEFFICIENTS["thermo"] * (y_pred - y_ref).square().mean()
+        print(f"EPOCH {epoch}:")
+
+        energy_loss = COEFFICIENTS["energy"] * (energy_pred - energy_ref).square().mean()
+        force_loss = COEFFICIENTS["force"] * (forces_pred - forces_ref).square().mean()
+
+        print(
+            f"\tenergy component (coefficient {COEFFICIENTS['energy']}) has loss contribution {energy_loss.item():.6f}"
         )
 
+        print(f"\tforce component (coefficient {COEFFICIENTS['force']}) has loss contribution {force_loss.item():.6f}")
+
+        loss = energy_loss + force_loss
+
+        for tag, results in thermo_results.items():
+            this_loss = COEFFICIENTS[tag] * (results["y_pred"] - results["y_ref"]).square().mean()
+            print(
+                f"\tthermo component {tag=} (coefficient {COEFFICIENTS[tag]}) "
+                f"has loss contribution {this_loss.item():.6f}"
+            )
+            loss += this_loss
+
         logger.info(f"EPOCH {epoch}: loss={loss.item():.6f}")
-        print(f"EPOCH {epoch}: loss={loss.item():.6f}")
-        print(f"\tloss component energy (after applying {COEFFICIENTS=})")
-        print(f"\tenergy {COEFFICIENTS['energy'] * (energy_pred - energy_ref).square().mean()}")
-        print(f"\tforce {COEFFICIENTS['force'] * (forces_pred - forces_ref).square().mean()}")
-        print(f"\tthermo {COEFFICIENTS['thermo'] * (y_pred - y_ref).square().mean()}")
+
+        print(f"\n\nEPOCH {epoch}: total loss={loss.item():.6f}\n")
 
         optimizer.zero_grad()
 
